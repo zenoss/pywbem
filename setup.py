@@ -20,6 +20,19 @@ management protocol.'''
 
 # Author: Tim Potter <tpot@hp.com>
 
+# Version 0.8.x are changes made by the Zenoss Labs Team.
+#
+
+#0.8.1
+#Due to a serious performance hit on memory the minidom was replaced with
+#the Python C library cElementTree. This allows better handling of memory and
+#increased the performance on the results returned.
+#Also, The ExecQuery method was added to support CQL calls via WBEM.
+#
+# 0.8.0
+#Cleaned up twisted_client. It was not working in the deployed state.
+#Made several modifications to the methods to correctly use twisted.
+
 from distutils.core import setup, Extension
 import sys, string, os
 import shutil
@@ -34,7 +47,7 @@ args = {'name': 'pywbem',
         'long_description': __doc__,
         'platforms': ['any'],
         'url': 'http://pywbem.sf.net/',
-        'version': '0.7.1',
+        'version': '0.8.1',
         'license': 'LGPLv2',
         'packages': ['pywbem'],
         # Make packages in root dir appear in pywbem module
