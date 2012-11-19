@@ -46,49 +46,25 @@ The CONTENTS is a list of child elements.
 The fourth element is reserved.
 """
 
-def dom_to_tupletree(node):
-    """Convert a DOM object to a pyRXP-style tuple tree.
-
-    Each element is a 4-tuple of (NAME, ATTRS, CONTENTS, None).
-
-    Very nice for processing complex nested trees.
-    """
-    import types
+def ele_to_tupletree(node):
+    """Convert a ElementTree to a Tuple"""
     
-    if node.nodeType == node.DOCUMENT_NODE:
-        # boring; pop down one level
-        return dom_to_tupletree(node.firstChild)
-    assert node.nodeType == node.ELEMENT_NODE
-    
-    name = node.nodeName
+    name = node.tag
     attrs = {}
     contents = []
-
-    for child in node.childNodes:
-        if child.nodeType == child.ELEMENT_NODE:
-            contents.append(dom_to_tupletree(child))
-        elif child.nodeType == child.TEXT_NODE:
-            assert isinstance(child.nodeValue, types.StringTypes), \
-                   "text node %s is not a string" % `child`
-            contents.append(child.nodeValue)
-        elif child.nodeType == child.CDATA_SECTION_NODE:
-            contents.append(child.nodeValue)
-        else:
-            raise RuntimeError("can't handle %s" % child)
-
-    for i in range(node.attributes.length):
-        attr_node = node.attributes.item(i)
-        attrs[attr_node.nodeName] = attr_node.nodeValue
-
-    # XXX: Cannot yet handle comments, cdata, processing instructions and
-    # other XML batshit.
-
-    # it's so easy in retrospect!
+    
+    contents.append(node.text)
+    
+    for child in node:
+        if str(type(child)) == "<type 'Element'>":
+            contents.append(ele_to_tupletree(child))
+            
+    attrs = node.attrib
     return (name, attrs, contents, None)
-
-
+    
 def xml_to_tupletree(xml_string):
     """Parse XML straight into tupletree."""
-    import xml.dom.minidom
-    dom_xml = xml.dom.minidom.parseString(xml_string)
-    return dom_to_tupletree(dom_xml)
+
+    import xml.etree.cElementTree as ElementTree
+    ele_xml = ElementTree.fromstring(xml_string)
+    return ele_to_tupletree(ele_xml)
