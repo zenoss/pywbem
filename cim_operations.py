@@ -25,11 +25,11 @@
 
 import sys, string
 from types import StringTypes
-from xml.dom import minidom
+from xml.etree import cElementTree as ElementTree
 import cim_obj, cim_xml, cim_http, cim_types
 from cim_obj import CIMClassName, CIMInstanceName, CIMInstance, CIMClass
 from datetime import datetime, timedelta
-from tupletree import dom_to_tupletree, xml_to_tupletree
+from tupletree import ele_to_tupletree, xml_to_tupletree
 from tupleparse import parse_cim
 
 """CIM-XML/HTTP operations.
@@ -174,7 +174,7 @@ class WBEMConnection(object):
         ## TODO: Perhaps only compute this if it's required?  Should not be
         ## all that expensive.
 
-        reply_dom = minidom.parseString(resp_xml)
+        reply_dom = ElementTree.fromstring(resp_xml)
 
         if self.debug:
             self.last_reply = reply_dom.toprettyxml(indent='  ')
@@ -182,7 +182,7 @@ class WBEMConnection(object):
 
         # Parse response
 
-        tt = parse_cim(dom_to_tupletree(reply_dom))
+        tt = parse_cim(ele_to_tupletree(reply_dom))
 
         if tt[0] != 'CIM':
             raise CIMError(0, 'Expecting CIM element, got %s' % tt[0])
