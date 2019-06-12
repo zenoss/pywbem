@@ -1,0 +1,3 @@
+six
+ply
+M2Crypto>=0.24
