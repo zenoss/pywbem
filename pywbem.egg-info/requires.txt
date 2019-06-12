@@ -1,0 +1,10 @@
+M2Crypto>=0.31.0
+PyYAML>=3.13
+mock>=2.0.0
+pbr>=1.10.0
+ply>=3.10
+six>=1.10.0
+
+[:(python_version == '2.6')]
+PyYAML==3.11
+ordereddict>=1.1

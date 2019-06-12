@@ -1,0 +1,106 @@
+# Additional pip requirements file for pywbem develop.
+#
+# The order of packages is significant, because pip processes them in the order
+# of appearance.
+
+# Make sure that the minimum versions required in this file are also the
+# versions defined in minimum-constraints.txt.
+
+
+# Direct dependencies:
+
+# Unit test (imports into testcases):
+unittest2>=1.1.0
+pytest>=3.0.7,<3.3.0; python_version == '2.6'
+pytest>=3.3.0,!=3.9.2; python_version > '2.6'
+# testfixtures 6.0.0 no longer supports py26 and fails on py26 with syntax error
+testfixtures>=4.3.3,<6.0.0
+httpretty>=0.8.14,<0.9.1; python_version == '2.6'
+httpretty>=0.9.5; python_version > '2.6'
+lxml>=4.2.4,<4.3.0; python_version == '2.6'
+lxml>=4.2.4; python_version > '2.6'
+# Note: requests 2.19.1 has a security issue that is fixed in 2.20.0. However,
+#       requests 2.20.0 has dropped support for Python 2.6.
+requests>=2.19.1; python_version == '2.6'
+requests>=2.20.1; python_version > '2.6'
+decorator>=4.0.11
+yamlordereddictloader>=0.4.0
+funcsigs>=1.0.2
+
+# Indirect dependencies that are needed due to version pinning
+PyYAML==3.11; python_version == '2.6'  # yaml package, used by yamlordereddictloader
+PyYAML>=3.13; python_version >= '2.7'  # yaml package, used by yamlordereddictloader
+
+# Coverage reporting (no imports, invoked via coveralls script, only used on py27):
+# Note: python-coveralls 2.9.1 has requirement coverage==4.0.3, and therefore
+# must be stated before pytest-cov, whose 2.5.1 specifies requirement
+# coverage>=3.7.1 and thus would get coverage 4.5 1 if processed first.
+python-coveralls>=2.8.0; python_version == '2.7'
+
+# Safety CI by pyup.io
+safety>=1.8.4
+
+# Unit test (no imports, invoked via py.test script):
+
+# TODO: Remove the pinning of the pytest-cov version again once issue
+#       https://github.com/z4r/python-coveralls/issues/66
+#       is resolved.
+#       Background: pytest-cov 2.6.0 has increased the version
+#       requirement for the coverage package from >=3.7.1 to
+#       >=4.4, which is in conflict with the version requirement
+#       defined by the python-coveralls package for coverage==4.0.3.
+pytest-cov>=2.4.0,<2.6
+
+# Tox
+tox>=2.0.0
+
+# Sphinx (no imports, invoked via sphinx-build script, issues on py26):
+Sphinx>=1.7.6,<2.0.0; python_version >= '2.7' and python_version < '3.5'  # BSD
+Sphinx>=1.7.6,<2.0.0; python_version >= '3.5'  # BSD
+# TODO: On py3.5+, Sphinx currently fails, see issue
+#       https://github.com/sphinx-doc/sphinx/issues/6246. Therefore, Sphinx has
+#       been pinned to below 2.0.0 also for py3.5+.
+sphinx-git>=10.1.1; python_version >= '2.7'
+GitPython>=2.1.1; python_version >= '2.7'
+
+# PyLint (no imports, invoked via pylint script)
+# Pylint requires astroid
+# Pylint 1.x supports py2.7 and py3.4/5/6 but not py3.7+
+# Pylint 2.x supports py3.4+
+pylint>=1.6.4,<2.0.0; python_version == '2.7'
+pylint>=2.2.2; python_version >= '3.4'
+astroid>=1.4.9,<2.0.0; python_version == '2.7'
+astroid>=2.1.0; python_version >= '3.4'
+
+# Flake8 (no imports, invoked via flake8 script):
+flake8>=2.6.2,<3.0.0; python_version == '2.6'
+flake8>=3.2.1; python_version > '2.6'
+
+# Twine (no imports, invoked via twine script):
+twine>=1.8.1; python_version >= '2.7'
+
+# Jupyter Notebook (no imports, invoked via jupyter script, some deps do not support py26):
+jupyter>=1.0.0; python_version >= '2.7'
+
+# The tornado package is used by ipykernel which is used by jupyter.
+# Tornado 5.0.0 and 5.0.1 rejects installation if the Python ssl module
+# does not have certain symbols required by Tornado. This issue exists for
+# example with Python 2.7.6 on Ubuntu 14.04, but not with Python 2.7.5 on
+# RHEL 7.4. This can be checked with:
+#   python -c "import ssl; ssl.SSLContext; ssl.create_default_context; ssl.match_hostname"
+# Other projects have the same issue:
+#   https://github.com/floydhub/dl-docker/issues/84
+# The following is a circumvention of this issue that nails the tornado
+# version to below 5.0 on Python 2.
+# TODO: Follow up on resolution of this issue.
+tornado<5.0; python_version <= '2.7'
+
+# Table output formatter used by the manual performance tests to display
+# timing results
+tabulate >= 0.8.3
+
+# Performance profiling tools
+pyinstrument >=3.0.1
+
+# Indirect dependencies are no longer specified here, but for testing with a
+# minimum version, they are listed in the minimum-constraints.txt file.

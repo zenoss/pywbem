@@ -1,0 +1,27 @@
+// A class with all CIM data types
+
+#pragma include ("qualifiers.mof")
+
+class EX_AllTypes
+{
+    [key] uint32 k1;
+    [key] string k2;
+    uint8  pui8;
+    uint16 pui16;
+    uint32 pui32;
+    uint64 pui64;
+    sint8  psi8;
+    sint16 psi16;
+    sint32 psi32;
+    sint64 psi64;
+    real32 pr32;
+    real64 pr64;
+    string ps;
+    char16 pc;
+    boolean pb;
+    datetime pdt;
+    [embeddedobject] string peo;
+    [embeddedinstance("EX_AllTypes")] string pei;
+};
+
+

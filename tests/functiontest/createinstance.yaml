@@ -1,0 +1,1148 @@
+- name: CreateInstance1
+  description: CreateInstance with simple class PyWBEM_Person
+  pywbem_request:
+    url: http://acme.com:80
+    creds:
+    - username
+    - password
+    namespace: root/cimv2
+    timeout: 10
+    debug: false
+    operation:
+      pywbem_method: CreateInstance
+      NewInstance:
+        pywbem_object: CIMInstance
+        classname: PyWBEM_Person
+        properties:
+          creationclassname:
+            pywbem_object: CIMProperty
+            name: CreationClassName
+            value: PyWBEM_Person
+            type: string
+            reference_class: null
+            embedded_object: null
+            is_array: false
+            array_size: null
+            class_origin: null
+            propagated: null
+            qualifiers: {}
+          name:
+            pywbem_object: CIMProperty
+            name: Name
+            value: run_cimoperations_test
+            type: string
+            reference_class: null
+            embedded_object: null
+            is_array: false
+            array_size: null
+            class_origin: null
+            propagated: null
+            qualifiers: {}
+        path:
+          pywbem_object: CIMInstanceName
+          classname: PyWBEM_Person
+          namespace: null
+          keybindings:
+            creationclassname: PyWBEM_Person
+            name: run_cimoperations_test
+      namespace: null
+  pywbem_response:
+    result:
+      pywbem_object: CIMInstanceName
+      classname: PyWBEM_Person
+      namespace: root/cimv2
+      keybindings:
+        creationclassname: PyWBEM_Person
+        name: run_cimoperations_test
+  http_request:
+    verb: POST
+    url: http://acme.com:80/cimom
+    headers:
+      CIMOperation: MethodCall
+      CIMMethod: CreateInstance
+      CIMObject: root/cimv2
+    data: '<?xml version="1.0" encoding="utf-8" ?>
+      <CIM CIMVERSION="2.0" DTDVERSION="2.0">
+      <MESSAGE ID="1001" PROTOCOLVERSION="1.0">
+      <SIMPLEREQ>
+      <IMETHODCALL NAME="CreateInstance">
+      <LOCALNAMESPACEPATH>
+      <NAMESPACE NAME="root"/>
+      <NAMESPACE NAME="cimv2"/>
+      </LOCALNAMESPACEPATH>
+      <IPARAMVALUE NAME="NewInstance">
+      <INSTANCE CLASSNAME="PyWBEM_Person">
+      <PROPERTY NAME="CreationClassName" TYPE="string">
+      <VALUE>PyWBEM_Person</VALUE>
+      </PROPERTY>
+      <PROPERTY NAME="Name" TYPE="string">
+      <VALUE>run_cimoperations_test</VALUE>
+      </PROPERTY>
+      </INSTANCE>
+      </IPARAMVALUE>
+      </IMETHODCALL>
+      </SIMPLEREQ>
+      </MESSAGE>
+      </CIM>'
+  http_response:
+    status: 200
+    headers:
+      cimoperation: MethodResponse
+    data: '<?xml version="1.0" encoding="utf-8" ?>
+      <CIM CIMVERSION="2.0" DTDVERSION="2.0">
+      <MESSAGE ID="1001" PROTOCOLVERSION="1.0">
+      <SIMPLERSP>
+      <IMETHODRESPONSE NAME="CreateInstance">
+      <IRETURNVALUE>
+      <INSTANCENAME CLASSNAME="PyWBEM_Person">
+      <KEYBINDING NAME="CreationClassName">
+      <KEYVALUE VALUETYPE="string">PyWBEM_Person</KEYVALUE>
+      </KEYBINDING>
+      <KEYBINDING NAME="Name">
+      <KEYVALUE VALUETYPE="string">run_cimoperations_test</KEYVALUE>
+      </KEYBINDING>
+      </INSTANCENAME>
+      </IRETURNVALUE>
+      </IMETHODRESPONSE>
+      </SIMPLERSP>
+      </MESSAGE>
+      </CIM>'
+
+- name: CreateInstance2
+  description: CreateInstance with simple class PyWBEM_Person, testing payload sizes
+  pywbem_request:
+    url: http://acme.com:80
+    creds:
+    - username
+    - password
+    namespace: root/cimv2
+    timeout: 10
+    debug: false
+    stats-enabled: true
+    operation:
+      pywbem_method: CreateInstance
+      NewInstance:
+        pywbem_object: CIMInstance
+        classname: PyWBEM_Person
+        properties:
+          creationclassname:
+            pywbem_object: CIMProperty
+            name: CreationClassName
+            value: PyWBEM_Person
+            type: string
+            reference_class: null
+            embedded_object: null
+            is_array: false
+            array_size: null
+            class_origin: null
+            propagated: null
+            qualifiers: {}
+          name:
+            pywbem_object: CIMProperty
+            name: Name
+            value: run_cimoperations_test
+            type: string
+            reference_class: null
+            embedded_object: null
+            is_array: false
+            array_size: null
+            class_origin: null
+            propagated: null
+            qualifiers: {}
+        path:
+          pywbem_object: CIMInstanceName
+          classname: PyWBEM_Person
+          namespace: null
+          keybindings:
+            creationclassname: PyWBEM_Person
+            name: run_cimoperations_test
+      namespace: null
+  pywbem_response:
+    request_len: 523
+    reply_len: 519
+    result:
+      pywbem_object: CIMInstanceName
+      classname: PyWBEM_Person
+      namespace: root/cimv2
+      keybindings:
+        creationclassname: PyWBEM_Person
+        name: run_cimoperations_test
+  http_request:
+    verb: POST
+    url: http://acme.com:80/cimom
+    headers:
+      CIMOperation: MethodCall
+      CIMMethod: CreateInstance
+      CIMObject: root/cimv2
+    data: '<?xml version="1.0" encoding="utf-8" ?>
+      <CIM CIMVERSION="2.0" DTDVERSION="2.0">
+      <MESSAGE ID="1001" PROTOCOLVERSION="1.0">
+      <SIMPLEREQ>
+      <IMETHODCALL NAME="CreateInstance">
+      <LOCALNAMESPACEPATH>
+      <NAMESPACE NAME="root"/>
+      <NAMESPACE NAME="cimv2"/>
+      </LOCALNAMESPACEPATH>
+      <IPARAMVALUE NAME="NewInstance">
+      <INSTANCE CLASSNAME="PyWBEM_Person">
+      <PROPERTY NAME="CreationClassName" TYPE="string">
+      <VALUE>PyWBEM_Person</VALUE>
+      </PROPERTY>
+      <PROPERTY NAME="Name" TYPE="string">
+      <VALUE>run_cimoperations_test</VALUE>
+      </PROPERTY>
+      </INSTANCE>
+      </IPARAMVALUE>
+      </IMETHODCALL>
+      </SIMPLEREQ>
+      </MESSAGE>
+      </CIM>'
+  http_response:
+    status: 200
+    headers:
+      cimoperation: MethodResponse
+    data: '<?xml version="1.0" encoding="utf-8" ?>
+      <CIM CIMVERSION="2.0" DTDVERSION="2.0">
+      <MESSAGE ID="1001" PROTOCOLVERSION="1.0">
+      <SIMPLERSP>
+      <IMETHODRESPONSE NAME="CreateInstance">
+      <IRETURNVALUE>
+      <INSTANCENAME CLASSNAME="PyWBEM_Person">
+      <KEYBINDING NAME="CreationClassName">
+      <KEYVALUE VALUETYPE="string">PyWBEM_Person</KEYVALUE>
+      </KEYBINDING>
+      <KEYBINDING NAME="Name">
+      <KEYVALUE VALUETYPE="string">run_cimoperations_test</KEYVALUE>
+      </KEYBINDING>
+      </INSTANCENAME>
+      </IRETURNVALUE>
+      </IMETHODRESPONSE>
+      </SIMPLERSP>
+      </MESSAGE>
+      </CIM>'
+
+-   name: CreateInstance3
+    description: CreateInstance with PyWBEM_AllTypes, testing all CIM types
+    pywbem_request:
+        url: http://acme.com:80
+        creds:
+        - username
+        - password
+        namespace: root/cimv2
+        timeout: 10
+        debug: false
+        operation:
+            pywbem_method: CreateInstance
+            NewInstance:
+                pywbem_object: CIMInstance
+                classname: PyWBEM_AllTypes
+                properties:
+                  - pywbem_object: CIMProperty
+                    name: InstanceId
+                    value: run_cimoperations_test1
+                    type: string
+                  - pywbem_object: CIMProperty
+                    name: scalBool
+                    value: true
+                    type: boolean
+                  - pywbem_object: CIMProperty
+                    name: scalUint8
+                    value: 42
+                    type: uint8
+                  - pywbem_object: CIMProperty
+                    name: scalSint8
+                    value: -42
+                    type: sint8
+                  - pywbem_object: CIMProperty
+                    name: scalUint16
+                    value: 4216
+                    type: uint16
+                  - pywbem_object: CIMProperty
+                    name: scalSint16
+                    value: -4216
+                    type: sint16
+                  - pywbem_object: CIMProperty
+                    name: scalUint32
+                    value: 4232
+                    type: uint32
+                  - pywbem_object: CIMProperty
+                    name: scalSint32
+                    value: -4232
+                    type: sint32
+                  - pywbem_object: CIMProperty
+                    name: scalUint64
+                    value: 99999
+                    type: uint64
+                  - pywbem_object: CIMProperty
+                    name: scalSint64
+                    value: -99999
+                    type: sint64
+                  - pywbem_object: CIMProperty
+                    name: scalReal32
+                    value: 42.0
+                    type: real32
+                  - pywbem_object: CIMProperty
+                    name: scalReal64
+                    value: 32.25
+                    type: real64
+                  - pywbem_object: CIMProperty
+                    name: scalString
+                    value: ham
+                    type: string
+                  - pywbem_object: CIMProperty
+                    name: scalDateTime
+                    value: 20160331193040.654321+120
+                    type: datetime
+                  - pywbem_object: CIMProperty
+                    name: scalTimeDelta
+                    value: 00001234112233.654321:000
+                    type: datetime
+                  - pywbem_object: CIMProperty
+                    name: arrayBool
+                    value:
+                    - false
+                    - true
+                    type: boolean
+                    is_array: true
+                  - pywbem_object: CIMProperty
+                    name: arrayUint8
+                    value:
+                    - 0
+                    - 1
+                    - 44
+                    - 127
+                    type: uint8
+                    is_array: true
+                  - pywbem_object: CIMProperty
+                    name: arraySint8
+                    value:
+                    - 0
+                    - -1
+                    - 44
+                    - 127
+                    type: sint8
+                    is_array: true
+                  - pywbem_object: CIMProperty
+                    name: arrayUint16
+                    value:
+                    - 0
+                    - -1
+                    - 44
+                    - 127
+                    type: sint16
+                    is_array: true
+                  - pywbem_object: CIMProperty
+                    name: arraySint16
+                    value:
+                    - 42
+                    - -99
+                    type: sint16
+                    is_array: true
+                  - pywbem_object: CIMProperty
+                    name: arrayUint32
+                    value:
+                    - 42
+                    - 99
+                    type: uint32
+                    is_array: true
+                  - pywbem_object: CIMProperty
+                    name: arraySint32
+                    value:
+                    - 42
+                    - -99
+                    type: sint32
+                    is_array: true
+                  - pywbem_object: CIMProperty
+                    name: arrayUint64
+                    value:
+                    - 42
+                    - 999999
+                    type: uint64
+                    is_array: true
+                  - pywbem_object: CIMProperty
+                    name: arraySint64
+                    value:
+                    - 4222222
+                    - -999999
+                    type: sint64
+                    is_array: true
+                  - pywbem_object: CIMProperty
+                    name: arrayReal32
+                    value:
+                    - 42.0
+                    - 4442.9
+                    type: real32
+                    is_array: true
+                  - pywbem_object: CIMProperty
+                    name: arrayReal64
+                    value:
+                    - 32.25
+                    - 64.5
+                    type: real64
+                    is_array: true
+                  - pywbem_object: CIMProperty
+                    name: arrayString
+                    value:
+                    - ham
+                    - Häm
+                    type: string
+                    is_array: true
+                  - pywbem_object: CIMProperty
+                    name: arrayDateTime
+                    value:
+                    - 20160331193040.654321+120
+                    - 20160331193040.654321+120
+                    type: datetime
+                    is_array: true
+                  - pywbem_object: CIMProperty
+                    name: arrayTimeDelta
+                    value:
+                    - 00001234112233.654321:000
+                    - 00001234112233.654321:000
+                    type: datetime
+                    is_array: true
+            namespace: null
+    pywbem_response:
+        result:
+            pywbem_object: CIMInstanceName
+            classname: PyWBEM_AllTypes
+            namespace: root/cimv2
+            keybindings:
+                InstanceId: run_cimoperations_test1
+    http_request:
+        verb: POST
+        url: http://acme.com:80/cimom
+        headers:
+            CIMMethod: CreateInstance
+            CIMOperation: MethodCall
+            CIMObject: root/cimv2
+        data: '<?xml version="1.0" encoding="utf-8" ?>
+            <CIM CIMVERSION="2.0" DTDVERSION="2.0">
+              <MESSAGE ID="1001" PROTOCOLVERSION="1.0">
+                <SIMPLEREQ>
+                  <IMETHODCALL NAME="CreateInstance">
+                    <LOCALNAMESPACEPATH>
+                      <NAMESPACE NAME="root"/>
+                      <NAMESPACE NAME="cimv2"/>
+                    </LOCALNAMESPACEPATH>
+                    <IPARAMVALUE NAME="NewInstance">
+                      <INSTANCE CLASSNAME="PyWBEM_AllTypes">
+                        <PROPERTY NAME="InstanceId" TYPE="string">
+                          <VALUE>run_cimoperations_test1</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="scalBool" TYPE="boolean">
+                          <VALUE>TRUE</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="scalUint8" TYPE="uint8">
+                          <VALUE>42</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="scalSint8" TYPE="sint8">
+                          <VALUE>-42</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="scalUint16" TYPE="uint16">
+                          <VALUE>4216</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="scalSint16" TYPE="sint16">
+                          <VALUE>-4216</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="scalUint32" TYPE="uint32">
+                          <VALUE>4232</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="scalSint32" TYPE="sint32">
+                          <VALUE>-4232</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="scalUint64" TYPE="uint64">
+                          <VALUE>99999</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="scalSint64" TYPE="sint64">
+                          <VALUE>-99999</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="scalReal32" TYPE="real32">
+                          <VALUE>42.0</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="scalReal64" TYPE="real64">
+                          <VALUE>32.25</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="scalString" TYPE="string">
+                          <VALUE>ham</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="scalDateTime" TYPE="datetime">
+                          <VALUE>20160331193040.654321+120</VALUE>
+                        </PROPERTY>
+                        <PROPERTY NAME="scalTimeDelta" TYPE="datetime">
+                          <VALUE>00001234112233.654321:000</VALUE>
+                        </PROPERTY>
+                        <PROPERTY.ARRAY NAME="arrayBool" TYPE="boolean">
+                          <VALUE.ARRAY>
+                            <VALUE>FALSE</VALUE>
+                            <VALUE>TRUE</VALUE>
+                          </VALUE.ARRAY>
+                        </PROPERTY.ARRAY>
+                        <PROPERTY.ARRAY NAME="arrayUint8" TYPE="uint8">
+                          <VALUE.ARRAY>
+                            <VALUE>0</VALUE>
+                            <VALUE>1</VALUE>
+                            <VALUE>44</VALUE>
+                            <VALUE>127</VALUE>
+                          </VALUE.ARRAY>
+                        </PROPERTY.ARRAY>
+                        <PROPERTY.ARRAY NAME="arraySint8" TYPE="sint8">
+                          <VALUE.ARRAY>
+                            <VALUE>0</VALUE>
+                            <VALUE>-1</VALUE>
+                            <VALUE>44</VALUE>
+                            <VALUE>127</VALUE>
+                          </VALUE.ARRAY>
+                        </PROPERTY.ARRAY>
+                        <PROPERTY.ARRAY NAME="arrayUint16" TYPE="sint16">
+                          <VALUE.ARRAY>
+                            <VALUE>0</VALUE>
+                            <VALUE>-1</VALUE>
+                            <VALUE>44</VALUE>
+                            <VALUE>127</VALUE>
+                          </VALUE.ARRAY>
+                        </PROPERTY.ARRAY>
+                        <PROPERTY.ARRAY NAME="arraySint16" TYPE="sint16">
+                          <VALUE.ARRAY>
+                            <VALUE>42</VALUE>
+                            <VALUE>-99</VALUE>
+                          </VALUE.ARRAY>
+                        </PROPERTY.ARRAY>
+                        <PROPERTY.ARRAY NAME="arrayUint32" TYPE="uint32">
+                          <VALUE.ARRAY>
+                            <VALUE>42</VALUE>
+                            <VALUE>99</VALUE>
+                          </VALUE.ARRAY>
+                        </PROPERTY.ARRAY>
+                        <PROPERTY.ARRAY NAME="arraySint32" TYPE="sint32">
+                          <VALUE.ARRAY>
+                            <VALUE>42</VALUE>
+                            <VALUE>-99</VALUE>
+                          </VALUE.ARRAY>
+                        </PROPERTY.ARRAY>
+                        <PROPERTY.ARRAY NAME="arrayUint64" TYPE="uint64">
+                          <VALUE.ARRAY>
+                            <VALUE>42</VALUE>
+                            <VALUE>999999</VALUE>
+                          </VALUE.ARRAY>
+                        </PROPERTY.ARRAY>
+                        <PROPERTY.ARRAY NAME="arraySint64" TYPE="sint64">
+                          <VALUE.ARRAY>
+                            <VALUE>4222222</VALUE>
+                            <VALUE>-999999</VALUE>
+                          </VALUE.ARRAY>
+                        </PROPERTY.ARRAY>
+                        <PROPERTY.ARRAY NAME="arrayReal32" TYPE="real32">
+                          <VALUE.ARRAY>
+                            <VALUE>42.0</VALUE>
+                            <VALUE>4442.9</VALUE>
+                          </VALUE.ARRAY>
+                        </PROPERTY.ARRAY>
+                        <PROPERTY.ARRAY NAME="arrayReal64" TYPE="real64">
+                          <VALUE.ARRAY>
+                            <VALUE>32.25</VALUE>
+                            <VALUE>64.5</VALUE>
+                          </VALUE.ARRAY>
+                        </PROPERTY.ARRAY>
+                        <PROPERTY.ARRAY NAME="arrayString" TYPE="string">
+                          <VALUE.ARRAY>
+                            <VALUE>ham</VALUE>
+                            <VALUE>Häm</VALUE>
+                          </VALUE.ARRAY>
+                        </PROPERTY.ARRAY>
+                        <PROPERTY.ARRAY NAME="arrayDateTime" TYPE="datetime">
+                          <VALUE.ARRAY>
+                            <VALUE>20160331193040.654321+120</VALUE>
+                            <VALUE>20160331193040.654321+120</VALUE>
+                          </VALUE.ARRAY>
+                        </PROPERTY.ARRAY>
+                        <PROPERTY.ARRAY NAME="arrayTimeDelta" TYPE="datetime">
+                          <VALUE.ARRAY>
+                            <VALUE>00001234112233.654321:000</VALUE>
+                            <VALUE>00001234112233.654321:000</VALUE>
+                          </VALUE.ARRAY>
+                        </PROPERTY.ARRAY>
+                      </INSTANCE>
+                    </IPARAMVALUE>
+                  </IMETHODCALL>
+                </SIMPLEREQ>
+              </MESSAGE>
+            </CIM>'
+    http_response:
+        status: 200
+        headers:
+            cimoperation: MethodResponse
+        data: '<?xml version="1.0" encoding="utf-8" ?>
+            <CIM CIMVERSION="2.0" DTDVERSION="2.0">
+              <MESSAGE ID="1001" PROTOCOLVERSION="1.0">
+                <SIMPLERSP>
+                  <IMETHODRESPONSE NAME="CreateInstance">
+                    <IRETURNVALUE>
+                      <INSTANCENAME CLASSNAME="PyWBEM_AllTypes">
+                        <KEYBINDING NAME="InstanceId">
+                          <KEYVALUE VALUETYPE="string">run_cimoperations_test1</KEYVALUE>
+                        </KEYBINDING>
+                      </INSTANCENAME>
+                    </IRETURNVALUE>
+                  </IMETHODRESPONSE>
+                </SIMPLERSP>
+              </MESSAGE>
+            </CIM>'
+
+# TODO needs much more completed instance to create
+
+- name: CreateInstanceE1
+  description: CreateInstance fails with CIM status 2 (Access Denied)
+  pywbem_request:
+    url: http://acme.com:80
+    creds:
+    - username
+    - password
+    namespace: root/cimv2
+    timeout: 10
+    debug: false
+    operation:
+      pywbem_method: CreateInstance
+      NewInstance:
+        pywbem_object: CIMInstance
+        classname: PyWBEM_Person
+        properties:
+          creationclassname:
+            pywbem_object: CIMProperty
+            name: CreationClassName
+            value: PyWBEM_Person
+            type: string
+            reference_class: null
+            embedded_object: null
+            is_array: false
+            array_size: null
+            class_origin: null
+            propagated: null
+            qualifiers: {}
+          name:
+            pywbem_object: CIMProperty
+            name: Name
+            value: run_cimoperations_test
+            type: string
+            reference_class: null
+            embedded_object: null
+            is_array: false
+            array_size: null
+            class_origin: null
+            propagated: null
+            qualifiers: {}
+        path:
+          pywbem_object: CIMInstanceName
+          classname: PyWBEM_Person
+          namespace: null
+          keybindings:
+            creationclassname: PyWBEM_Person
+            name: run_cimoperations_test
+      namespace: null
+  pywbem_response:
+    cim_status: 2
+  http_request:
+        verb: POST
+        url: http://acme.com:80/cimom
+        headers:
+          CIMOperation: MethodCall
+          CIMMethod: CreateInstance
+          CIMObject: root/cimv2
+        data: '<?xml version="1.0" encoding="utf-8" ?>
+          <CIM CIMVERSION="2.0" DTDVERSION="2.0">
+          <MESSAGE ID="1001" PROTOCOLVERSION="1.0">
+          <SIMPLEREQ>
+          <IMETHODCALL NAME="CreateInstance">
+          <LOCALNAMESPACEPATH>
+          <NAMESPACE NAME="root"/>
+          <NAMESPACE NAME="cimv2"/>
+          </LOCALNAMESPACEPATH>
+          <IPARAMVALUE NAME="NewInstance">
+          <INSTANCE CLASSNAME="PyWBEM_Person">
+          <PROPERTY NAME="CreationClassName" TYPE="string">
+          <VALUE>PyWBEM_Person</VALUE>
+          </PROPERTY>
+          <PROPERTY NAME="Name" TYPE="string">
+          <VALUE>run_cimoperations_test</VALUE>
+          </PROPERTY>
+          </INSTANCE>
+          </IPARAMVALUE>
+          </IMETHODCALL>
+          </SIMPLEREQ>
+          </MESSAGE>
+          </CIM>'
+  http_response:
+        status: 200
+        headers:
+            CIMOperation: MethodResponse
+        data: >
+            <?xml version="1.0" encoding="utf-8" ?>
+            <CIM CIMVERSION="2.0" DTDVERSION="2.0">
+              <MESSAGE ID="1001" PROTOCOLVERSION="1.0">
+                <SIMPLERSP>
+                  <IMETHODRESPONSE NAME="CreateInstance">
+                    <ERROR CODE="2" DESCRIPTION="CIM_ERR_ACCESS_DENIED: Access denied"/>
+                  </IMETHODRESPONSE>
+                </SIMPLERSP>
+              </MESSAGE>
+            </CIM>
+
+- name: CreateInstanceE2
+  description: CreateInstance fails with missing IRETURNVALUE element in response
+  pywbem_request:
+    url: http://acme.com:80
+    creds:
+    - username
+    - password
+    namespace: root/cimv2
+    timeout: 10
+    debug: false
+    operation:
+      pywbem_method: CreateInstance
+      NewInstance:
+        pywbem_object: CIMInstance
+        classname: PyWBEM_Person
+        properties:
+          creationclassname:
+            pywbem_object: CIMProperty
+            name: CreationClassName
+            value: PyWBEM_Person
+            type: string
+            reference_class: null
+            embedded_object: null
+            is_array: false
+            array_size: null
+            class_origin: null
+            propagated: null
+            qualifiers: {}
+          name:
+            pywbem_object: CIMProperty
+            name: Name
+            value: run_cimoperations_test
+            type: string
+            reference_class: null
+            embedded_object: null
+            is_array: false
+            array_size: null
+            class_origin: null
+            propagated: null
+            qualifiers: {}
+        path: null
+      namespace: null
+  pywbem_response:
+    exception: CIMXMLParseError
+  http_request:
+    verb: POST
+    url: http://acme.com:80/cimom
+    headers:
+      CIMOperation: MethodCall
+      CIMMethod: CreateInstance
+      CIMObject: root/cimv2
+    data: '<?xml version="1.0" encoding="utf-8" ?>
+      <CIM CIMVERSION="2.0" DTDVERSION="2.0">
+      <MESSAGE ID="1001" PROTOCOLVERSION="1.0">
+      <SIMPLEREQ>
+      <IMETHODCALL NAME="CreateInstance">
+      <LOCALNAMESPACEPATH>
+      <NAMESPACE NAME="root"/>
+      <NAMESPACE NAME="cimv2"/>
+      </LOCALNAMESPACEPATH>
+      <IPARAMVALUE NAME="NewInstance">
+      <INSTANCE CLASSNAME="PyWBEM_Person">
+      <PROPERTY NAME="CreationClassName" TYPE="string">
+      <VALUE>PyWBEM_Person</VALUE>
+      </PROPERTY>
+      <PROPERTY NAME="Name" TYPE="string">
+      <VALUE>run_cimoperations_test</VALUE>
+      </PROPERTY>
+      </INSTANCE>
+      </IPARAMVALUE>
+      </IMETHODCALL>
+      </SIMPLEREQ>
+      </MESSAGE>
+      </CIM>'
+  http_response:
+    status: 200
+    headers:
+      cimoperation: MethodResponse
+    data: '<?xml version="1.0" encoding="utf-8" ?>
+      <CIM CIMVERSION="2.0" DTDVERSION="2.0">
+      <MESSAGE ID="1001" PROTOCOLVERSION="1.0">
+      <SIMPLERSP>
+      <IMETHODRESPONSE NAME="CreateInstance">
+      </IMETHODRESPONSE>
+      </SIMPLERSP>
+      </MESSAGE>
+      </CIM>'
+
+- name: CreateInstanceE3
+  description: CreateInstance fails with missing INSTANCENAME element in response
+  pywbem_request:
+    url: http://acme.com:80
+    creds:
+    - username
+    - password
+    namespace: root/cimv2
+    timeout: 10
+    debug: false
+    operation:
+      pywbem_method: CreateInstance
+      NewInstance:
+        pywbem_object: CIMInstance
+        classname: PyWBEM_Person
+        properties:
+          creationclassname:
+            pywbem_object: CIMProperty
+            name: CreationClassName
+            value: PyWBEM_Person
+            type: string
+            reference_class: null
+            embedded_object: null
+            is_array: false
+            array_size: null
+            class_origin: null
+            propagated: null
+            qualifiers: {}
+          name:
+            pywbem_object: CIMProperty
+            name: Name
+            value: run_cimoperations_test
+            type: string
+            reference_class: null
+            embedded_object: null
+            is_array: false
+            array_size: null
+            class_origin: null
+            propagated: null
+            qualifiers: {}
+        path: null
+      namespace: null
+  pywbem_response:
+    exception: CIMXMLParseError
+  http_request:
+    verb: POST
+    url: http://acme.com:80/cimom
+    headers:
+      CIMOperation: MethodCall
+      CIMMethod: CreateInstance
+      CIMObject: root/cimv2
+    data: '<?xml version="1.0" encoding="utf-8" ?>
+      <CIM CIMVERSION="2.0" DTDVERSION="2.0">
+      <MESSAGE ID="1001" PROTOCOLVERSION="1.0">
+      <SIMPLEREQ>
+      <IMETHODCALL NAME="CreateInstance">
+      <LOCALNAMESPACEPATH>
+      <NAMESPACE NAME="root"/>
+      <NAMESPACE NAME="cimv2"/>
+      </LOCALNAMESPACEPATH>
+      <IPARAMVALUE NAME="NewInstance">
+      <INSTANCE CLASSNAME="PyWBEM_Person">
+      <PROPERTY NAME="CreationClassName" TYPE="string">
+      <VALUE>PyWBEM_Person</VALUE>
+      </PROPERTY>
+      <PROPERTY NAME="Name" TYPE="string">
+      <VALUE>run_cimoperations_test</VALUE>
+      </PROPERTY>
+      </INSTANCE>
+      </IPARAMVALUE>
+      </IMETHODCALL>
+      </SIMPLEREQ>
+      </MESSAGE>
+      </CIM>'
+  http_response:
+    status: 200
+    headers:
+      cimoperation: MethodResponse
+    data: '<?xml version="1.0" encoding="utf-8" ?>
+      <CIM CIMVERSION="2.0" DTDVERSION="2.0">
+      <MESSAGE ID="1001" PROTOCOLVERSION="1.0">
+      <SIMPLERSP>
+      <IMETHODRESPONSE NAME="CreateInstance">
+      <IRETURNVALUE>
+      </IRETURNVALUE>
+      </IMETHODRESPONSE>
+      </SIMPLERSP>
+      </MESSAGE>
+      </CIM>'
+
+- name: CreateInstanceE4
+  description: CreateInstance fails with incorrect CLASSNAME element in response
+  pywbem_request:
+    url: http://acme.com:80
+    creds:
+    - username
+    - password
+    namespace: root/cimv2
+    timeout: 10
+    debug: false
+    operation:
+      pywbem_method: CreateInstance
+      NewInstance:
+        pywbem_object: CIMInstance
+        classname: PyWBEM_Person
+        properties:
+          creationclassname:
+            pywbem_object: CIMProperty
+            name: CreationClassName
+            value: PyWBEM_Person
+            type: string
+            reference_class: null
+            embedded_object: null
+            is_array: false
+            array_size: null
+            class_origin: null
+            propagated: null
+            qualifiers: {}
+          name:
+            pywbem_object: CIMProperty
+            name: Name
+            value: run_cimoperations_test
+            type: string
+            reference_class: null
+            embedded_object: null
+            is_array: false
+            array_size: null
+            class_origin: null
+            propagated: null
+            qualifiers: {}
+        path: null
+      namespace: null
+  pywbem_response:
+    exception: CIMXMLParseError
+  http_request:
+    verb: POST
+    url: http://acme.com:80/cimom
+    headers:
+      CIMOperation: MethodCall
+      CIMMethod: CreateInstance
+      CIMObject: root/cimv2
+    data: '<?xml version="1.0" encoding="utf-8" ?>
+      <CIM CIMVERSION="2.0" DTDVERSION="2.0">
+      <MESSAGE ID="1001" PROTOCOLVERSION="1.0">
+      <SIMPLEREQ>
+      <IMETHODCALL NAME="CreateInstance">
+      <LOCALNAMESPACEPATH>
+      <NAMESPACE NAME="root"/>
+      <NAMESPACE NAME="cimv2"/>
+      </LOCALNAMESPACEPATH>
+      <IPARAMVALUE NAME="NewInstance">
+      <INSTANCE CLASSNAME="PyWBEM_Person">
+      <PROPERTY NAME="CreationClassName" TYPE="string">
+      <VALUE>PyWBEM_Person</VALUE>
+      </PROPERTY>
+      <PROPERTY NAME="Name" TYPE="string">
+      <VALUE>run_cimoperations_test</VALUE>
+      </PROPERTY>
+      </INSTANCE>
+      </IPARAMVALUE>
+      </IMETHODCALL>
+      </SIMPLEREQ>
+      </MESSAGE>
+      </CIM>'
+  http_response:
+    status: 200
+    headers:
+      cimoperation: MethodResponse
+    data: '<?xml version="1.0" encoding="utf-8" ?>
+      <CIM CIMVERSION="2.0" DTDVERSION="2.0">
+      <MESSAGE ID="1001" PROTOCOLVERSION="1.0">
+      <SIMPLERSP>
+      <IMETHODRESPONSE NAME="CreateInstance">
+      <IRETURNVALUE>
+      <CLASSNAME NAME="PyWBEM_Person">
+      </CLASSNAME>
+      </IRETURNVALUE>
+      </IMETHODRESPONSE>
+      </SIMPLERSP>
+      </MESSAGE>
+      </CIM>'
+
+- name: CreateInstanceNS1
+  description: CreateInstance with leading/trailing slashes in namespace, using default namespace of connection
+  pywbem_request:
+    url: http://acme.com:80
+    creds:
+    - username
+    - password
+    namespace: //root/mycim//
+    timeout: 10
+    debug: false
+    operation:
+      pywbem_method: CreateInstance
+      NewInstance:
+        pywbem_object: CIMInstance
+        classname: PyWBEM_Person
+        properties:
+          creationclassname:
+            pywbem_object: CIMProperty
+            name: CreationClassName
+            value: PyWBEM_Person
+            type: string
+          name:
+            pywbem_object: CIMProperty
+            name: Name
+            value: run_cimoperations_test
+            type: string
+        path:
+          pywbem_object: CIMInstanceName
+          classname: PyWBEM_Person
+          keybindings:
+            creationclassname: PyWBEM_Person
+            name: run_cimoperations_test
+      namespace: null
+  pywbem_response:
+    result:
+      pywbem_object: CIMInstanceName
+      classname: PyWBEM_Person
+      namespace: root/mycim
+      keybindings:
+        creationclassname: PyWBEM_Person
+        name: run_cimoperations_test
+  http_request:
+    verb: POST
+    url: http://acme.com:80/cimom
+    headers:
+      CIMOperation: MethodCall
+      CIMMethod: CreateInstance
+      CIMObject: root/mycim
+    data: '<?xml version="1.0" encoding="utf-8" ?>
+      <CIM CIMVERSION="2.0" DTDVERSION="2.0">
+      <MESSAGE ID="1001" PROTOCOLVERSION="1.0">
+      <SIMPLEREQ>
+      <IMETHODCALL NAME="CreateInstance">
+      <LOCALNAMESPACEPATH>
+      <NAMESPACE NAME="root"/>
+      <NAMESPACE NAME="mycim"/>
+      </LOCALNAMESPACEPATH>
+      <IPARAMVALUE NAME="NewInstance">
+      <INSTANCE CLASSNAME="PyWBEM_Person">
+      <PROPERTY NAME="CreationClassName" TYPE="string">
+      <VALUE>PyWBEM_Person</VALUE>
+      </PROPERTY>
+      <PROPERTY NAME="Name" TYPE="string">
+      <VALUE>run_cimoperations_test</VALUE>
+      </PROPERTY>
+      </INSTANCE>
+      </IPARAMVALUE>
+      </IMETHODCALL>
+      </SIMPLEREQ>
+      </MESSAGE>
+      </CIM>'
+  http_response:
+    status: 200
+    headers:
+      cimoperation: MethodResponse
+    data: '<?xml version="1.0" encoding="utf-8" ?>
+      <CIM CIMVERSION="2.0" DTDVERSION="2.0">
+      <MESSAGE ID="1001" PROTOCOLVERSION="1.0">
+      <SIMPLERSP>
+      <IMETHODRESPONSE NAME="CreateInstance">
+      <IRETURNVALUE>
+      <INSTANCENAME CLASSNAME="PyWBEM_Person">
+      <KEYBINDING NAME="CreationClassName">
+      <KEYVALUE VALUETYPE="string">PyWBEM_Person</KEYVALUE>
+      </KEYBINDING>
+      <KEYBINDING NAME="Name">
+      <KEYVALUE VALUETYPE="string">run_cimoperations_test</KEYVALUE>
+      </KEYBINDING>
+      </INSTANCENAME>
+      </IRETURNVALUE>
+      </IMETHODRESPONSE>
+      </SIMPLERSP>
+      </MESSAGE>
+      </CIM>'
+
+- name: CreateInstanceNS2
+  description: CreateInstance with leading/trailing slashes in namespace, using target namespace of operation
+  pywbem_request:
+    url: http://acme.com:80
+    creds:
+    - username
+    - password
+    namespace: null
+    timeout: 10
+    debug: false
+    operation:
+      pywbem_method: CreateInstance
+      NewInstance:
+        pywbem_object: CIMInstance
+        classname: PyWBEM_Person
+        properties:
+          creationclassname:
+            pywbem_object: CIMProperty
+            name: CreationClassName
+            value: PyWBEM_Person
+            type: string
+          name:
+            pywbem_object: CIMProperty
+            name: Name
+            value: run_cimoperations_test
+            type: string
+        path:
+          pywbem_object: CIMInstanceName
+          classname: PyWBEM_Person
+          keybindings:
+            creationclassname: PyWBEM_Person
+            name: run_cimoperations_test
+      namespace: //root/mycim//
+  pywbem_response:
+    result:
+      pywbem_object: CIMInstanceName
+      classname: PyWBEM_Person
+      namespace: root/mycim
+      keybindings:
+        creationclassname: PyWBEM_Person
+        name: run_cimoperations_test
+  http_request:
+    verb: POST
+    url: http://acme.com:80/cimom
+    headers:
+      CIMOperation: MethodCall
+      CIMMethod: CreateInstance
+      CIMObject: root/mycim
+    data: '<?xml version="1.0" encoding="utf-8" ?>
+      <CIM CIMVERSION="2.0" DTDVERSION="2.0">
+      <MESSAGE ID="1001" PROTOCOLVERSION="1.0">
+      <SIMPLEREQ>
+      <IMETHODCALL NAME="CreateInstance">
+      <LOCALNAMESPACEPATH>
+      <NAMESPACE NAME="root"/>
+      <NAMESPACE NAME="mycim"/>
+      </LOCALNAMESPACEPATH>
+      <IPARAMVALUE NAME="NewInstance">
+      <INSTANCE CLASSNAME="PyWBEM_Person">
+      <PROPERTY NAME="CreationClassName" TYPE="string">
+      <VALUE>PyWBEM_Person</VALUE>
+      </PROPERTY>
+      <PROPERTY NAME="Name" TYPE="string">
+      <VALUE>run_cimoperations_test</VALUE>
+      </PROPERTY>
+      </INSTANCE>
+      </IPARAMVALUE>
+      </IMETHODCALL>
+      </SIMPLEREQ>
+      </MESSAGE>
+      </CIM>'
+  http_response:
+    status: 200
+    headers:
+      cimoperation: MethodResponse
+    data: '<?xml version="1.0" encoding="utf-8" ?>
+      <CIM CIMVERSION="2.0" DTDVERSION="2.0">
+      <MESSAGE ID="1001" PROTOCOLVERSION="1.0">
+      <SIMPLERSP>
+      <IMETHODRESPONSE NAME="CreateInstance">
+      <IRETURNVALUE>
+      <INSTANCENAME CLASSNAME="PyWBEM_Person">
+      <KEYBINDING NAME="CreationClassName">
+      <KEYVALUE VALUETYPE="string">PyWBEM_Person</KEYVALUE>
+      </KEYBINDING>
+      <KEYBINDING NAME="Name">
+      <KEYVALUE VALUETYPE="string">run_cimoperations_test</KEYVALUE>
+      </KEYBINDING>
+      </INSTANCENAME>
+      </IRETURNVALUE>
+      </IMETHODRESPONSE>
+      </SIMPLERSP>
+      </MESSAGE>
+      </CIM>'

@@ -1,0 +1,127 @@
+
+environment:
+  matrix:
+
+    - TOX_ENV: win64_py27_32
+      UNIX_PATH: none
+      PYTHON_CMD: python
+
+#    - TOX_ENV: win64_py27_64
+#      UNIX_PATH: none
+#      PYTHON_CMD: python
+
+#    - TOX_ENV: win64_py34_32
+#      UNIX_PATH: none
+#      PYTHON_CMD: python
+
+#    - TOX_ENV: win64_py34_64
+#      UNIX_PATH: none
+#      PYTHON_CMD: python
+
+#    - TOX_ENV: win64_py35_32
+#      UNIX_PATH: none
+#      PYTHON_CMD: python
+
+#    - TOX_ENV: win64_py35_64
+#      UNIX_PATH: none
+#      PYTHON_CMD: python
+
+#    - TOX_ENV: win64_py36_32
+#      UNIX_PATH: none
+#      PYTHON_CMD: python
+
+#    - TOX_ENV: win64_py36_64
+#      UNIX_PATH: none
+#      PYTHON_CMD: python
+
+#    - TOX_ENV: win64_py37_32
+#      UNIX_PATH: none
+#      PYTHON_CMD: python
+
+#    - TOX_ENV: win64_py37_64
+#      UNIX_PATH: none
+#      PYTHON_CMD: python
+
+# TODO: Disabled because python2.7 with cygwin 32-bit fails with:
+#       "virtualenv is not compatible with this system or executable"
+#    - TOX_ENV: cygwin32_py27
+#      UNIX_PATH: C:\cygwin\bin
+#      PYTHON_CMD: python2.7
+#      PIP_CMD: pip
+
+#    - TOX_ENV: cygwin64_py27
+#      UNIX_PATH: C:\cygwin64\bin
+#      PYTHON_CMD: python2.7
+#      PIP_CMD: pip
+
+    - TOX_ENV: cygwin64_py36
+      UNIX_PATH: C:\cygwin64\bin
+      PYTHON_CMD: python3.6m
+      PIP_CMD: pip
+
+configuration:
+# These values will become the values of the PACKAGE_LEVEL env.var.
+#  - minimum
+  - latest
+
+install:
+
+  # Examine the environment
+  - ver
+  - set
+  - dir
+  - dir C:\
+
+  - git --version
+  - if %APPVEYOR_REPO_BRANCH%.==manual-ci-run. set _NEED_REBASE=true
+  # This Git version requires user configuration in rebase step
+  - if %_NEED_REBASE%.==true. git config user.name "dummy"
+  - if %_NEED_REBASE%.==true. git config user.email "dummy@dummy"
+  - if %_NEED_REBASE%.==true. git fetch origin master
+  - if %_NEED_REBASE%.==true. git branch master FETCH_HEAD
+  - if %_NEED_REBASE%.==true. git rebase master
+  - git branch -av
+
+  - if %APPVEYOR_REPO_BRANCH%.==manual-ci-run. set _MANUAL_CI_RUN=true
+  - if %APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH%.==manual-ci-run. set _MANUAL_CI_RUN=true
+
+  # Set PACKAGE_LEVEL for make
+  - set PACKAGE_LEVEL=%configuration%
+
+  # For UNIX, reduce the PATH to a minimum (to avoid blanks in directory names)
+  - if not "%UNIX_PATH%"=="none" set PATH=C:\Windows\system32;C:\Windows;C:\ProgramData\chocolatey\bin
+
+  # Add UNIX commands to the path (used for bash)
+  - if not "%UNIX_PATH%"=="none" set PATH=%UNIX_PATH%;%PATH%
+
+  # Verify that Chocolatey is available
+  - where choco
+  - choco --version
+
+  # Install GNU make
+  - if "%UNIX_PATH%"=="none" tools\retry choco install -y make
+  - if "%UNIX_PATH%"=="none" where make
+  - if "%UNIX_PATH%"=="none" make --version
+
+  # Install Pip, where needed
+  - if "%UNIX_PATH%"=="C:\cygwin\bin" ( bash --noprofile --norc -c "set -e; %PYTHON_CMD% -m ensurepip; %PYTHON_CMD% -m pip install --upgrade pip setuptools wheel" )
+  - if "%UNIX_PATH%"=="C:\cygwin64\bin" ( bash --noprofile --norc -c "set -e; %PYTHON_CMD% -m ensurepip; %PYTHON_CMD% -m pip install --upgrade pip setuptools wheel" )
+
+  # Install Tox
+  - if "%UNIX_PATH%"=="none" ( cmd /c "pip install tox & where tox & tox --version" )
+  - if "%UNIX_PATH%"=="C:\cygwin\bin" ( bash --noprofile --norc -c "set -e; %PYTHON_CMD% -m pip install tox; which -a tox; tox --version" )
+  - if "%UNIX_PATH%"=="C:\cygwin64\bin" ( bash --noprofile --norc -c "set -e; %PYTHON_CMD% -m pip install tox; which -a tox; tox --version" )
+
+  # Initialize CygWin updates (must be done outside of CygWin bash in case it updates cygwin.dll)
+  - 'if "%UNIX_PATH%"=="C:\cygwin\bin" ( C:\cygwin\setup-x86.exe --no-shortcuts --quiet-mode )'
+  - 'if "%UNIX_PATH%"=="C:\cygwin64\bin" ( C:\cygwin64\setup-x86_64.exe --no-shortcuts --quiet-mode )'
+
+build: false
+
+before_test:
+
+test_script:
+  - 'if "%UNIX_PATH%"=="none" ( where tox & tox -vv -e %TOX_ENV% & echo appveyor.yml: tox rc=%errorlevel% )'
+  - 'if "%UNIX_PATH%"=="C:\cygwin\bin" ( bash -c "which tox && tox -vv -e %TOX_ENV% && echo appveyor.yml: tox rc=$?" )'
+  - 'if "%UNIX_PATH%"=="C:\cygwin64\bin" ( bash -c "which tox && tox -vv -e %TOX_ENV% && echo appveyor.yml: tox rc=$?" )'
+  - 'echo appveyor.yml: done'
