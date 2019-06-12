@@ -1,0 +1,6 @@
+These are the OpenSSL v1.1.1 (LTS through 2023) libraries compiled within the (centOS) zope container, along with needed header
+  libssl.so.1.1
+  libcrypto.so.1.1
+  libssl.a
+  libcrypto.a
+  include/*.h
