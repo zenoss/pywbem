@@ -251,6 +251,7 @@ class ExecQuery(BaseWBEMMethod):
         tt = [pywbem.tupletree.xml_to_tupletree_sax(tostring(x), 'INSTANCE')
               for x in xml.findall('.//INSTANCE')]
 
+        # returns CIMInstance
         tp = pywbem.tupleparse.TupleParser()
         return [tp.parse_instance(x) for x in tt]
 
@@ -310,13 +311,16 @@ class OpenEnumerateInstances(BaseWBEMMethod):
         for paramvalue in xml.findall('.//PARAMVALUE'):
             str_paramvalue = tostring(paramvalue)
             tuple_paramvalue = pywbem.tupletree.xml_to_tupletree_sax(str_paramvalue, 'PARAMVALUE')
-            part_results.update(TupleParser().parse_paramvalue(tuple_paramvalue))
+            # returns 3-part tuple; name, type, value
+            tuple = TupleParser().parse_paramvalue(tuple_paramvalue)
+            part_results.update([(tuple[0], tuple[2])])
 
         for x in xml.findall('.//VALUE.INSTANCEWITHPATH'):
             s = tostring(x)
             tt = pywbem.tupletree.xml_to_tupletree_sax(s, 'INSTANCEWITHPATH')
+            # return instance path object
             part_res = TupleParser().parse_value_instancewithpath(tt)
-            result_element = part_res['VALUE.INSTANCEWITHPATH']
+            result_element = part_res
 
             specific_prop_name, _ = self.property_filter
 
@@ -486,6 +490,7 @@ class EnumerateInstances(BaseWBEMMethod):
         for x in xml.findall('.//VALUE.NAMEDINSTANCE'):
             s = tostring(x)
             tt = pywbem.tupletree.xml_to_tupletree_sax(s, 'NAMEDINSTANCE')
+            # returns CIMInstance
             r = TupleParser().parse_value_namedinstance(tt)
             res.append(r)
         return res
@@ -531,6 +536,7 @@ class EnumerateInstanceNames(BaseWBEMMethod):
         tt = [pywbem.tupletree.xml_to_tupletree_sax(tostring(x), 'INSTANCENAME')
               for x in xml.findall('.//INSTANCENAME')]
 
+        # returns CIMInstance
         names = [TupleParser().parse_instancename(x) for x in tt]
 
         [setattr(n, 'namespace', self.namespace) for n in names]
@@ -574,6 +580,7 @@ class EnumerateClassNames(BaseWBEMMethod):
         tt = [pywbem.tupletree.xml_to_tupletree_sax(tostring(x), 'CLASSNAME')
               for x in xml.findall('.//CLASSNAME')]
 
+        # returns CIMInstance
         return [TupleParser().parse_classname(x) for x in tt]
 
 class EnumerateClasses(BaseWBEMMethod):
@@ -613,6 +620,7 @@ class EnumerateClasses(BaseWBEMMethod):
         tt = [pywbem.tupletree.xml_to_tupletree_sax(tostring(x), 'CLASS')
               for x in xml.findall('.//CLASS')]
 
+        # returns CIMInstance
         return [TupleParser().parse_class(x) for x in tt]
 
 
