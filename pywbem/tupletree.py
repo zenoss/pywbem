@@ -122,6 +122,23 @@ class CIMContentHandler(xml.sax.ContentHandler):
             children.append(content)
 
 
+def xml_to_tupletree(xml_string):
+    """
+    Added by Zenoss to maintain compatability with twisted_client.py
+    See xml_to_tupletree_sax for more information
+
+    Parameters:
+      xml_string (:term:`string`): A unicode string (when called for embedded
+        objects) or UTF-8 encoded byte string (when called for CIM-XML
+        replies) containing the XML to be parsed.
+
+    Returns:
+      tupletree tuple with parsed XML tree
+
+    """
+    return xml_to_tupletree_sax(xml_string, '')
+
+
 def xml_to_tupletree_sax(xml_string, meaning, conn_id=None):
     """
     Parse an XML string into tupletree with SAX parser.
