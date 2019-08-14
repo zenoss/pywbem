@@ -30,7 +30,9 @@ transferred in the HTTP request and response is CIM-XML.  It is up to the
 caller to provide CIM-XML formatted input data and interpret the result data
 as CIM-XML.
 '''
-from __future__ import print_function
+
+from __future__ import print_function, absolute_import
+
 import re
 import os
 import sys
@@ -42,53 +44,96 @@ import platform
 import base64
 import threading
 from datetime import datetime
+import warnings
+
 import six
 from six.moves import http_client as httplib
 from six.moves import urllib
 
-from .cim_obj import CIMClassName, CIMInstanceName, _ensure_unicode, \
-                    _ensure_bytes
+from .cim_obj import CIMClassName, CIMInstanceName
+from .exceptions import ConnectionError, AuthError, TimeoutError, HTTPError
+from ._warnings import ToleratedServerIssueWarning
+from ._utils import _ensure_unicode, _ensure_bytes, _format
 
-if six.PY2:
-    from M2Crypto import SSL
-    from M2Crypto.Err import SSLError
+_ON_RTD = os.environ.get('READTHEDOCS', None) == 'True'
+
+if six.PY2 and not _ON_RTD:  # RTD has no swig to install M2Crypto
+    # pylint: disable=wrong-import-order
+    from M2Crypto import SSL           # pylint: disable=wrong-import-position
+    from M2Crypto.Err import SSLError  # pylint: disable=wrong-import-position
     _HAVE_M2CRYPTO = True
-    #pylint: disable=invalid-name
+    # pylint: disable=invalid-name
     SocketErrors = (socket.error, socket.sslerror)
 else:
     import ssl as SSL                  # pylint: disable=wrong-import-position
-    from ssl import SSLError, CertificateError # pylint: disable=wrong-import-position
+    # pylint: disable=wrong-import-position
+    from ssl import SSLError, CertificateError
     _HAVE_M2CRYPTO = False
-    #pylint: disable=invalid-name
+    # pylint: disable=invalid-name
     SocketErrors = (socket.error,)
 
-__all__ = ['Error', 'ConnectionError', 'AuthError', 'TimeoutError']
+__all__ = ['DEFAULT_CA_CERT_PATHS']
 
-class Error(Exception):
-    """Exception base class for catching any HTTP transport related errors."""
-    pass
 
-class ConnectionError(Error):
-    """This exception is raised when there is a problem with the connection
-    to the server. A retry may or may not succeed."""
-    pass
+def create_pywbem_ssl_context():
+    """ Create an SSL context based on what is commonly accepted as the
+        required limitations. This code attempts to create the same context for
+        Python 2 and Python 3 except for the ciphers
+        This list is based on what is currently defined in the Python SSL
+        module create_default_context function
+        This includes:
 
-class AuthError(Error):
-    """This exception is raised when an authentication error (401) occurs."""
-    pass
+            * Disallow SSLV2 and SSLV3
+            * Allow TLSV1 TLSV1.1, TLSV1.2
+            * No compression
+            * Single DH Use and Single ECDH use
+        cacerts info is set independently so is not part of our context setter.
+    """
 
-class TimeoutError(Error):
-    """This exception is raised when the client times out."""
-    pass
+    if six.PY2:
+        context = SSL.Context('sslv23')
+        # Many of the flags are not in the M2Crypto source so they were taken
+        # from OpenSSL SSL.h module as flags.
+        SSL.context.set_options(SSL.SSL_OP_NO_SSLv2 |
+                                0x02000000 |  # OP_NO_SSLV3
+                                0x00020000 |  # OP_NO_COMPRESSION
+                                0x00100000 |  # OP_SINGLE_DH_USE
+                                0x00400000 |  # OP_CIPHER_SERVER_PREFERENCE
+                                0x00080000)   # OP_SINGLE_ECDH_USE
+    else:
+        # The choice for the Python SSL module is whether to use the
+        # create_default directly and possibly have different limits depending
+        # on which version of Python you use or to set the attributes
+        # directly based on a currently used SSL
+        context = SSL.create_default_context(purpose=SSL.Purpose.CLIENT_AUTH)
+
+        # Variable settings per SSL create_default_context. These are what
+        # the function above sets for Python 3.4
+        # context = SSLContext(PROTOCOL_SSLv23)
+        # context.options |= OP_NO_SSLv2
+        # context.options |= OP_NO_SSLv3
+        # context.options |= getattr(SSL, "OP_NO_COMPRESSION", 0)
+        # context.options |= getattr(SSL, "OP_CIPHER_SERVER_PREFERENCE", 0)
+        # context.options |= getattr(SSL, "OP_SINGLE_DH_USE", 0)
+        # context.options |= getattr(SSL, "OP_SINGLE_ECDH_USE", 0)
+        # context.set_ciphers(_RESTRICTED_SERVER_CIPHERS)
+
+    return context
 
 
 DEFAULT_PORT_HTTP = 5988        # default port for http
 DEFAULT_PORT_HTTPS = 5989       # default port for https
 
-#TODO 5/16 ks This is a linux based set of defaults.
+
+#: Default directory paths to be used when the `ca_certs` parameter of
+#: :class:`~pywbem.WBEMConnection` is `None`. The first existing directory is
+#: used as a default for that parameter.
+#: Note that these default directory paths only work on some Linux
+#: distributions.
 DEFAULT_CA_CERT_PATHS = \
-     ['/etc/pki/ca-trust/extracted/openssl/ca-bundle.trust.crt', \
-      '/etc/ssl/certs', '/etc/ssl/certificates']
+    ['/etc/pki/ca-trust/extracted/openssl/ca-bundle.trust.crt',
+     '/etc/ssl/certs', '/etc/ssl/certificates']
+
 
 def get_default_ca_cert_paths():
     """Return the list of default certificate paths defined for this
@@ -105,42 +150,50 @@ class HTTPTimeout(object):  # pylint: disable=too-few-public-methods
     statement).
 
     Usage:
+
       ::
-        with HTTPTimeout(timeout, http_conn):
+
+        with HTTPTimeout(timeout, http_conn, conn_id):
             ... operations using http_conn ...
 
     If the timeout expires, the socket of the HTTP connection is shut down.
     Once the http operations return as a result of that or for other reasons,
-    the exit handler of this class raises a `cim_http.Error` exception in the
-    thread that executed the ``with`` statement.
+    the exit handler of this class raises a :exc:`~pywbem.TimeoutError`
+    exception in the thread that executed the ``with`` statement.
     """
 
-    def __init__(self, timeout, http_conn):
+    def __init__(self, timeout, http_conn, conn_id=None):
         """Initialize the HTTPTimeout object.
 
         :Parameters:
 
-          timeout : number
-            Timeout in seconds, ``None`` means no timeout.
+          timeout (:term:`number`):
+            Timeout in seconds, `None` means no timeout.
 
-          http_conn : `httplib.HTTPBaseConnection` (or subclass)
+          http_conn (`httplib.HTTPBaseConnection` or subclass):
             The connection that is to be stopped when the timeout expires.
+
+          conn_id (:term:`connection id`): Connection ID of the WBEM connection
+            in whose context the error happened. `None` if the error did not
+            happen in context of any connection, or if the connection context
+            was not known.
         """
 
         self._timeout = timeout
         self._http_conn = http_conn
-        self._retrytime = 5     # time in seconds after which a retry of the
-                                # socket shutdown is scheduled if the socket
-                                # is not yet on the connection when the
-                                # timeout expires initially.
+        self._conn_id = conn_id
+
+        # time in seconds after which a retry of socket shutdown is scheduled
+        # if the socket is not yet connected when timeout expires
+        self._retrytime = 5
+
         self._timer = None      # the timer object
         self._ts1 = None        # timestamp when timer was started
-        self._shutdown = None   # flag indicating that the timer handler has
-                                # shut down the socket
+        self._shutdown = None   # flag indicating timer handler shutdown socket
         return
 
     def __enter__(self):
-        if self._timeout != None:
+        if self._timeout is not None:
             self._timer = threading.Timer(self._timeout,
                                           HTTPTimeout.timer_expired, [self])
             self._timer.start()
@@ -149,7 +202,7 @@ class HTTPTimeout(object):  # pylint: disable=too-few-public-methods
         return
 
     def __exit__(self, exc_type, exc_value, traceback):
-        if self._timeout != None:
+        if self._timeout is not None:
             self._timer.cancel()
             if self._shutdown:
                 # If the timer handler has shut down the socket, we
@@ -157,11 +210,13 @@ class HTTPTimeout(object):  # pylint: disable=too-few-public-methods
                 # exceptions that may be pending.
                 ts2 = datetime.now()
                 duration = ts2 - self._ts1
-                duration_sec = float(duration.microseconds)/1000000 +\
-                               duration.seconds + duration.days*24*3600
-                raise TimeoutError("The client timed out and closed the "\
-                                   "socket after %.0fs." % duration_sec)
-        return False # re-raise any other exceptions
+                duration_sec = (float(duration.microseconds) / 1000000) + \
+                    duration.seconds + (duration.days * 24 * 3600)
+                raise TimeoutError(
+                    _format("The client timed out and closed the socket "
+                            "after {0:.0f} s.", duration_sec),
+                    conn_id=self._conn_id)
+        return False  # re-raise any other exceptions
 
     def timer_expired(self):
         """
@@ -174,7 +229,7 @@ class HTTPTimeout(object):  # pylint: disable=too-few-public-methods
         So we do not guarantee in all cases that the overall operation times
         out after the specified timeout.
         """
-        if self._http_conn.sock != None:
+        if self._http_conn.sock is not None:
             self._shutdown = True
             self._http_conn.sock.shutdown(socket.SHUT_RDWR)
         else:
@@ -184,20 +239,21 @@ class HTTPTimeout(object):  # pylint: disable=too-few-public-methods
                                           HTTPTimeout.timer_expired, [self])
             self._timer.start()
 
-def parse_url(url):
-    """Return a tuple of ``(host, port, ssl)`` from the URL specified in the
-    ``url`` parameter.
 
-    The returned ``ssl`` item is a boolean indicating the use of SSL, and is
+def parse_url(url, allow_defaults=True):
+    """Return a tuple (`host`, `port`, `ssl`) from the URL specified in the
+    `url` parameter.
+
+    The returned `ssl` item is a boolean indicating the use of SSL, and is
     recognized from the URL scheme (http vs. https). If none of these schemes
     is specified in the URL, the returned value defaults to False
     (non-SSL/http).
 
-    The returned ``port`` item is the port number, as an integer. If there is
+    The returned `port` item is the port number, as an integer. If there is
     no port number specified in the URL, the returned value defaults to 5988
     for non-SSL/http, and to 5989 for SSL/https.
 
-    The returned ``host`` item is the host portion of the URL, as a string.
+    The returned `host` item is the host portion of the URL, as a string.
     The host portion may be specified in the URL as a short or long host name,
     dotted IPv4 address, or bracketed IPv6 address with or without zone index
     (aka scope ID). An IPv6 address is converted from the RFC6874 URI syntax
@@ -206,18 +262,39 @@ def parse_url(url):
     "-eth0" to "%eth0".
 
     Examples for valid URLs can be found in the test program
-    `testsuite/test_cim_http.py`.
+    `tests/unittest/pywbem/test_cim_http.py`.
+
+    Parameters:
+
+      url:
+
+      allow_defaults - If `True` (default) allow defaults for scheme and
+        port. If `False`, raise exception for invalid or missing scheme or
+        port.
+
+    Returns:
+
+      tuple of (`host`, `port`, `ssl`)
+
+    Raises:
+
+      ValueError: Exception raised if allow_defaults = False and either
+        scheme or port are invalid or missing
     """
 
     default_ssl = False             # default SSL use (for no or unknown scheme)
 
     # Look for scheme.
     matches = re.match(r"^(https?)://(.*)$", url, re.I)
+    _scheme = None
     if matches:
         _scheme = matches.group(1).lower()
         hostport = matches.group(2)
         ssl = (_scheme == 'https')
     else:
+        if not allow_defaults:
+            raise ValueError(
+                _format("URL {0!A} invalid scheme component", url))
         # The URL specified no scheme (or a scheme other than the expected
         # schemes, but we don't check)
         ssl = default_ssl
@@ -238,6 +315,9 @@ def parse_url(url):
         host = hostport[0:matches.start(0)]
         port = int(matches.group(1))
     else:
+        if not allow_defaults:
+            raise ValueError(
+                _format("URL {0!A} invalid host/port component", url))
         host = hostport
         port = DEFAULT_PORT_HTTPS if ssl else DEFAULT_PORT_HTTP
 
@@ -252,17 +332,19 @@ def parse_url(url):
     if matches:
         # It is an IPv6 address
         host = matches.group(1)
-        if matches.group(2) != None:
+        if matches.group(2) is not None:
             # The zone index is present
             host += "%" + matches.group(2)
 
     return host, port, ssl
+
 
 def get_default_ca_certs():
     """
     Try to find out system path with ca certificates. This path is cached and
     returned. If no path is found out, None is returned.
     """
+    # pylint: disable=protected-access
     if not hasattr(get_default_ca_certs, '_path'):
         for path in get_default_ca_cert_paths():
             if os.path.exists(path):
@@ -272,10 +354,12 @@ def get_default_ca_certs():
             get_default_ca_certs._path = None
     return get_default_ca_certs._path
 
+
 # pylint: disable=too-many-branches,too-many-statements,too-many-arguments
-def wbem_request(url, data, creds, headers=[], debug=0, x509=None,
+def wbem_request(url, data, creds, cimxml_headers=None, debug=False, x509=None,
                  verify_callback=None, ca_certs=None,
-                 no_verification=False, timeout=None):
+                 no_verification=False, timeout=None, recorders=None,
+                 conn_id=None):
     # pylint: disable=too-many-arguments,unused-argument
     # pylint: disable=too-many-locals
     """
@@ -283,77 +367,102 @@ def wbem_request(url, data, creds, headers=[], debug=0, x509=None,
 
     This function uses Python's built-in `httplib` module.
 
-    :Parameters:
+    Parameters:
 
-      url : Unicode string or UTF-8 encoded byte string
+      url (:term:`string`):
         URL of the WBEM server (e.g. ``"https://10.11.12.13:6988"``).
-        For details, see the ``url`` parameter of
-        `WBEMConnection.__init__`.
+        For details, see the `url` parameter of
+        :meth:`~pywbem.WBEMConnection.__init__`.
 
-      data : Unicode string or UTF-8 encoded byte string
+      data (:term:`string`):
         The CIM-XML formatted data to be sent as a request to the WBEM server.
 
-      creds
+      creds:
         Credentials for authenticating with the WBEM server.
-        For details, see the ``creds`` parameter of
-        `WBEMConnection.__init__`.
+        For details, see the `creds` parameter of
+        :meth:`~pywbem.WBEMConnection.__init__`.
 
-      headers : list of Unicode strings or UTF-8 encoded byte strings
-        List of HTTP header fields to be added to the request, in addition to
-        the standard header fields such as ``Content-type``,
-        ``Content-length``, and ``Authorization``.
+      cimxml_headers (:term:`py:iterable` of tuple(string,string)):
+        Where each tuple contains: header name, header value.
 
-      debug : ``bool``
-        Boolean indicating whether to create debug information.
+        CIM-XML extension header fields for the request. The header value
+        is a string (unicode or binary) that is not encoded, and the two-step
+        encoding required by DSP0200 is performed inside of this function.
 
-      x509
+        A value of `None` is treated like an empty iterable.
+
+      debug (:class:`py:bool`):
+        Boolean indicating whether to create debug information (ignored).
+
+      x509:
         Used for HTTPS with certificates.
-        For details, see the ``x509`` parameter of
-        `WBEMConnection.__init__`.
+        For details, see the `x509` parameter of
+        :meth:`~pywbem.WBEMConnection.__init__`.
 
-      verify_callback
+      verify_callback:
+        Used for HTTPS with certificates but only for python 2. Ignored with
+        python 3 since the  python 3 ssl implementation does not implement
+        any callback mechanism so setting this variable gains the
+        user nothing.
+
+        For details, see the `verify_callback` parameter of
+        :meth:`~pywbem.WBEMConnection.__init__`.
+
+      ca_certs:
         Used for HTTPS with certificates.
-        For details, see the ``verify_callback`` parameter of
-        `WBEMConnection.__init__`.
+        For details, see the `ca_certs` parameter of
+        :meth:`~pywbem.WBEMConnection.__init__`.
 
-      ca_certs
+      no_verification:
         Used for HTTPS with certificates.
-        For details, see the ``ca_certs`` parameter of
-        `WBEMConnection.__init__`.
+        For details, see the `no_verification` parameter of
+        :meth:`~pywbem.WBEMConnection.__init__`.
 
-      no_verification
-        Used for HTTPS with certificates.
-        For details, see the ``no_verification`` parameter of
-        `WBEMConnection.__init__`.
-
-      timeout : number
+      timeout (:term:`number`):
         Timeout in seconds, for requests sent to the server. If the server did
         not respond within the timeout duration, the socket for the connection
-        will be closed, causing a `TimeoutError` to be raised.
-        A value of ``None`` means there is no timeout.
-        A value of ``0`` means the timeout is very short, and does not really
+        will be closed, causing a :exc:`~pywbem.TimeoutError` to be raised.
+        A value of `None` means there is no timeout.
+        A value of `0` means the timeout is very short, and does not really
         make any sense.
         Note that not all situations can be handled within this timeout, so
         for some issues, this method may take longer to raise an exception.
 
-    :Returns:
-      The CIM-XML formatted response data from the WBEM server, as a `unicode`
-      object.
+      recorders (List of :class:`~pywbem.BaseOperationRecorder`):
+        List of enabled operation recorders, into which the HTTP request and
+        HTTP response will be staged as attributes.
 
-    :Raises:
-      :raise AuthError:
-      :raise ConnectionError:
-      :raise TimeoutError:
+      conn_id (:term:`string`)
+        string that uniquely defines a connection.  Used as part of any
+        logs created.
+
+    Returns:
+
+        Tuple containing:
+
+            The CIM-XML formatted response data from the WBEM server, as a
+            :term:`byte string` object.
+
+            The server response time in seconds as floating point number if
+            this data was received from the server. If no data returned
+            from server `None` is returned.
+
+    Raises:
+
+        :exc:`~pywbem.AuthError`
+        :exc:`~pywbem.ConnectionError`
+        :exc:`~pywbem.TimeoutError`
+        :exc:`~pywbem.HTTPError`
     """
 
-    class HTTPBaseConnection:        # pylint: disable=no-init
+    class HTTPBaseConnection:  # pylint: disable=no-init
         """ Common base for specific connection classes. Implements
             the send method
         """
-        # pylint: disable=old-style-class,too-few-public-methods
+        # pylint: disable=too-few-public-methods
         def send(self, strng):
             """
-            A copy of httplib.HTTPConnection.send(), with these fixes:
+            A copy of `httplib.HTTPConnection.send()`, with these fixes:
 
             * We fix the problem that the connection gets closed upon error
               32 (EPIPE), by not doing that (If the connection gets closed,
@@ -363,31 +472,37 @@ def wbem_request(url, data, creds, headers=[], debug=0, x509=None,
               our fix here).
 
             * Ensure that the data are bytes, not unicode.
-              TODO 2016-05 AM: Ensuring bytes at this level can only be a
-                               quick fix. Figure out a better approach.
             """
-            if self.sock is None:
-                if self.auto_open:
-                    self.connect()
+            # NOTE: The attributes come from the httplib mixins in the
+            # subclasses so the disable=no-member hides worthless warnings.
+            if self.sock is None:  # pylint: disable=no-member
+                if self.auto_open:  # pylint: disable=no-member
+                    self.connect()  # pylint: disable=no-member
                 else:
+                    # We raise the same httplib exception the original function
+                    # raises. Our caller will handle it.
                     raise httplib.NotConnected()
-            if self.debuglevel > 0:
-                print("send: %r" % strng)
+            if self.debuglevel > 0:  # pylint: disable=no-member
+                print(_format("send: {0!A}", strng))
             blocksize = 8192
-            if hasattr(strng, 'read') and not isinstance(strng, array):
-                if self.debuglevel > 0:
+            if hasattr(strng, 'read') and not isinstance(strng, list):
+                if self.debuglevel > 0:  # pylint: disable=no-member
                     print("sendIng a read()able")
                 data = strng.read(blocksize)
                 while data:
+                    # pylint: disable=no-member
                     self.sock.sendall(_ensure_bytes(data))
                     data = strng.read(blocksize)
             else:
-                self.sock.sendall(_ensure_bytes(strng))
+                # For unknown reasons, the pylint disable must be on same line:
+                self.sock.sendall(_ensure_bytes(strng))  # noqa: E501 pylint: disable=no-member
 
     class HTTPConnection(HTTPBaseConnection, httplib.HTTPConnection):
         """ Execute client connection without ssl using httplib. """
         def __init__(self, host, port=None, timeout=None):
-            # TODO AM: Should we set strict=True in the following call, for PY2?
+            # Note: We do not use strict=True in the following call, because it
+            # is not clear what side effects that would have, and if no status
+            # line comes back we'll certainly find out about that.
             httplib.HTTPConnection.__init__(self, host=host, port=port,
                                             timeout=timeout)
 
@@ -396,19 +511,33 @@ def wbem_request(url, data, creds, headers=[], debug=0, x509=None,
         # pylint: disable=R0913,too-many-arguments
         def __init__(self, host, port=None, key_file=None, cert_file=None,
                      ca_certs=None, verify_callback=None, timeout=None):
-            # TODO AM: Should we set strict=True in the following call, for PY2?
+            # Note: We do not use strict=True in the following call, because it
+            # is not clear what side effects that would have, and if no status
+            # line comes back we'll certainly find out about that.
             httplib.HTTPSConnection.__init__(self, host=host, port=port,
                                              key_file=key_file,
                                              cert_file=cert_file,
                                              timeout=timeout)
             self.ca_certs = ca_certs
             self.verify_callback = verify_callback
+            # issue 297: Verify_callback is  not used in py 3
+            if verify_callback is not None and six.PY3:
+                warnings.warn("The 'verify_callback' parameter was specified "
+                              "on WBEMConnection() but is not used on "
+                              "Python 3", UserWarning)
+
+        def valid_ip(self, address):
+            try:
+                socket.inet_aton(address)
+                return True
+            except:
+                return False
 
         def connect(self):
             # pylint: disable=too-many-branches
             """Connect to a host on a given (SSL) port."""
 
-            ## Connect for M2Crypto ssl package
+            # Connect for M2Crypto ssl package
             if _HAVE_M2CRYPTO:
                 # Calling httplib.HTTPSConnection.connect(self) does not work
                 # because of its ssl.wrap_socket() call. So we copy the code of
@@ -418,9 +547,8 @@ def wbem_request(url, data, creds, headers=[], debug=0, x509=None,
                 # on to the socket call, because that does not work with
                 # M2Crypto.
 
-
                 if sys.version_info[0:2] >= (2, 7):
-                    # the source_address argument was added in 2.7
+                    # the source_address parameter was added in Python 2.7
                     self.sock = socket.create_connection(
                         (self.host, self.port), None, self.source_address)
                 else:
@@ -459,14 +587,12 @@ def wbem_request(url, data, creds, headers=[], debug=0, x509=None,
                     # Therefore, we set the timeout at the level of the outer
                     # M2Crypto socket object.
                     # pylint: disable=using-constant-test
-                    if False:
-                        # TODO 2/16 AM: Currently disabled, figure out how to
-                        #               reenable.
-                        if self.timeout is not None:
-                            self.sock.set_socket_read_timeout(
-                                SSL.timeout(self.timeout))
-                            self.sock.set_socket_write_timeout(
-                                SSL.timeout(self.timeout))
+
+                    if self.timeout is not None:
+                        self.sock.set_socket_read_timeout(
+                            SSL.timeout(self.timeout))
+                        self.sock.set_socket_write_timeout(
+                            SSL.timeout(self.timeout))
 
                     self.sock.addr = (self.host, self.port)
                     self.sock.setup_ssl()
@@ -475,36 +601,41 @@ def wbem_request(url, data, creds, headers=[], debug=0, x509=None,
                     if self.ca_certs:
                         check = getattr(self.sock, 'postConnectionCheck',
                                         self.sock.clientPostConnectionCheck)
+                        if self.valid_ip(self.host):
+                            # Bypass cert name check, it will fail since self.host is an IP address
+                            check = None
                         if check is not None:
                             if not check(self.sock.get_peer_cert(), self.host):
                                 raise ConnectionError(
-                                    'SSL error: post connection check failed')
+                                    'SSL error: post connection check failed',
+                                    conn_id=conn_id)
                     return ret
 
-                # TODO 2/16 AM: Verify whether the additional exceptions
-                #               in the M2Crypto code can
-                #               really be omitted:
-                #               Err.SSLError, SSL.SSLError, SSL.Checker.
-                #               WrongHost,
-                #               SSLTimeoutError
-                except SSLError as arg:
+                except (SSLError, SSL.SSLError,
+                        SSL.Checker.SSLVerificationError) as arg:
                     raise ConnectionError(
-                        "SSL error %s: %s" % (arg.__class__, arg))
+                        _format("SSL error {0}: {1}", arg.__class__, arg),
+                        conn_id=conn_id)
 
             # Connect using Python SSL module
             else:
                 # Setup the socket context
-                # TODO ks 4/16: confirm that we cannot use the default_context()
-                # Selects the highest protocol version that both the
-                # client and server support (SSLV23)
+
+                # Note: PROTOCOL_SSLv23 allows talking to servers with TLS but
+                # not with SSL. For details, see the table in
+                # https://docs.python.org/3/library/ssl.html#ssl.wrap_socket
+                # Within the defined set of protocol versions, SSLv23 selects
+                # the highest protocol version that both client and server
+                # support.
+                # Issue #893: Consider the use of default_context()
                 ctx = SSL.SSLContext(SSL.PROTOCOL_SSLv23)
 
-                # TODO ks 4/16: Is there a use for the CERT_OPTIONAL mode
                 if self.cert_file:
                     ctx.load_cert(self.cert_file, keyfile=self.key_file)
                 if self.ca_certs:
-                    # CERT_REQUIRED validates server certificate:
-                    # against certificates in ca_certs
+                    # We need to use CERT_REQUIRED to require that the server
+                    # certificate is being validated by the client (against the
+                    # certificates in ca_certs).
                     ctx.verify_mode = SSL.CERT_REQUIRED
                     if os.path.isdir(self.ca_certs):
                         ctx.load_verify_locations(capath=self.ca_certs)
@@ -526,10 +657,13 @@ def wbem_request(url, data, creds, headers=[], debug=0, x509=None,
 
                 except SSLError as arg:
                     raise ConnectionError(
-                        "SSL error %s: %s" % (arg.__class__, arg))
+                        _format("SSL error {0}: {1}", arg.__class__, arg),
+                        conn_id=conn_id)
                 except CertificateError as arg:
                     raise ConnectionError(
-                        "SSL certificate error %s: %s" % (arg.__class__, arg))
+                        _format("SSL certificate error {0}: {1}",
+                                arg.__class__, arg),
+                        conn_id=conn_id)
 
     class FileHTTPConnection(HTTPBaseConnection, httplib.HTTPConnection):
         """Execute client connection based on a unix domain socket. """
@@ -543,10 +677,14 @@ def wbem_request(url, data, creds, headers=[], debug=0, x509=None,
                 socket_af = socket.AF_UNIX
             except AttributeError:
                 raise ConnectionError(
-                    'file URLs not supported on %s platform due '\
-                    'to missing AF_UNIX support' % platform.system())
+                    _format("file URLs not supported on {0} platform due to "
+                            "missing AF_UNIX support", platform.system()),
+                    conn_id=conn_id)
             self.sock = socket.socket(socket_af, socket.SOCK_STREAM)
             self.sock.connect(self.uds_path)
+
+    if not cimxml_headers:
+        cimxml_headers = []
 
     host, port, use_ssl = parse_url(_ensure_unicode(url))
 
@@ -557,11 +695,9 @@ def wbem_request(url, data, creds, headers=[], debug=0, x509=None,
         cert_file = x509.get('cert_file')
         key_file = x509.get('key_file')
 
-    num_tries = 0
     local_auth_header = None
-    try_limit = 5
 
-    # Make sure the data argument is converted to a UTF-8 encoded byte string.
+    # Make sure the data parameter is converted to a UTF-8 encoded byte string.
     # This is important because according to RFC2616, the Content-Length HTTP
     # header must be measured in Bytes (and the Content-Type header will
     # indicate UTF-8).
@@ -577,6 +713,7 @@ def wbem_request(url, data, creds, headers=[], debug=0, x509=None,
         ca_certs = None
 
     local = False
+    svr_resp_time = None
     if use_ssl:
         client = HTTPSConnection(host=host,
                                  port=port,
@@ -587,9 +724,7 @@ def wbem_request(url, data, creds, headers=[], debug=0, x509=None,
                                  timeout=timeout)
     else:
         if url.startswith('http'):
-            client = HTTPConnection(host=host,  # pylint: disable=redefined-variable-type
-                                    port=port,
-                                    timeout=timeout)
+            client = HTTPConnection(host=host, port=port, timeout=timeout)
         else:
             if url.startswith('file:'):
                 url_ = url[5:]
@@ -601,9 +736,13 @@ def wbem_request(url, data, creds, headers=[], debug=0, x509=None,
                     client = FileHTTPConnection(url_)
                     local = True
                 else:
-                    raise ConnectionError('File URL is not a socket: %s' % url)
+                    raise ConnectionError(
+                        _format("File URL is not a socket: {0!A}", url),
+                        conn_id=conn_id)
             except OSError as exc:
-                raise ConnectionError('Error with file URL %s: %s' % (url, exc))
+                raise ConnectionError(
+                    _format("Error with file URL {0!A}: {1}", url, exc),
+                    conn_id=conn_id)
 
     locallogin = None
     if host in ('localhost', 'localhost6', '127.0.0.1', '::1'):
@@ -614,36 +753,55 @@ def wbem_request(url, data, creds, headers=[], debug=0, x509=None,
         except (KeyError, ImportError):
             locallogin = None
 
-    with HTTPTimeout(timeout, client):
+    method = 'POST'
+    target = '/cimom'
 
-        while num_tries < try_limit:
-            num_tries = num_tries + 1
+    if recorders:
+        for recorder in recorders:
+            recorder.stage_http_request(conn_id, 11, url, target, method,
+                                        dict(cimxml_headers), data)
 
-            client.putrequest('POST', '/cimom')
+            # We want clean response data when an exception is raised before
+            # the HTTP response comes in:
+            recorder.stage_http_response1(conn_id, None, None, None, None)
+            recorder.stage_http_response2(None)
 
-            client.putheader('Content-type',
-                             'application/xml; charset="utf-8"')
-            client.putheader('Content-length', str(len(data)))
-            if local_auth_header is not None:
-                # The following pylint stmt disables a false positive, see
-                # https://github.com/PyCQA/pylint/issues/701
-                # TODO 3/16 AM: Track resolution of this Pylint bug.
-                # pylint: disable=not-an-iterable
-                client.putheader(*local_auth_header)
+    with HTTPTimeout(timeout, client, conn_id):
+
+        try_limit = 5  # Number of tries with authentication challenges.
+
+        for num_tries in range(0, try_limit):  # pylint: disable=unused-variable
+
+            client.putrequest(method, target)
+
+            standard_headers = [
+                ('Content-type', 'application/xml; charset="utf-8"'),
+                ('Content-length', str(len(data))),
+            ]
+            if local_auth_header:
+                standard_headers.append(local_auth_header)
             elif creds is not None:
-                auth = '%s:%s' % (creds[0], creds[1])
+                auth = _format("{0}:{1}", creds[0], creds[1])
                 auth64 = _ensure_unicode(base64.b64encode(
                     _ensure_bytes(auth))).replace('\n', '')
-                client.putheader('Authorization', 'Basic %s' % auth64)
+                standard_headers.append(
+                    ('Authorization', 'Basic {0}'.format(auth64)))
             elif locallogin is not None:
-                client.putheader('PegasusAuthorization',
-                                 'Local "%s"' % locallogin)
+                standard_headers.append(
+                    ('PegasusAuthorization', 'Local "{0}"'.format(locallogin)))
 
-            for hdr in headers:
-                hdr = _ensure_unicode(hdr)
-                hdr_pieces = [x.strip() for x in hdr.split(':', 1)]
-                client.putheader(urllib.parse.quote(hdr_pieces[0]),
-                                 urllib.parse.quote(hdr_pieces[1]))
+            # Note: RFC2616 does not permit the use percent-escaping for
+            # the standard header fields. It allows octets (except CTL) for
+            # the field values. DSP0200 requires the use of UTF-8 encoding
+            # followed by percent-encoding for its extension headers.
+            # Therefore, we don't encode the standard headers but do encode
+            # the CIM-XML extension headers.
+            for n, v in standard_headers:
+                client.putheader(n, v)
+            for n, v in cimxml_headers:
+                v = _ensure_unicode(v)
+                v = urllib.parse.quote(v)
+                client.putheader(n, v)
 
             try:
 
@@ -666,68 +824,101 @@ def wbem_request(url, data, creds, headers=[], debug=0, x509=None,
                     client.send(data)
                 except SocketErrors as exc:
                     if exc.args[0] == errno.ECONNRESET:
-                        if debug:
-                            print("Debug: Ignoring socket error ECONNRESET " \
-                                  "(connection reset) returned by server.")
+                        warnings.warn("Ignoring socket error ECONNRESET "
+                                      "(connection reset), continuing with "
+                                      "reading the response.",
+                                      ToleratedServerIssueWarning,
+                                      stacklevel=2)
+                        # continue with reading response
                     elif exc.args[0] == errno.EPIPE:
-                        if debug:
-                            print("Debug: Ignoring socket error EPIPE " \
-                                  "(broken pipe) returned by server.")
+                        warnings.warn("Ignoring socket error EPIPE "
+                                      "(broken pipe), continuing with "
+                                      "reading the response.",
+                                      ToleratedServerIssueWarning,
+                                      stacklevel=2)
+                        # continue with reading response
                     else:
-                        raise ConnectionError("Socket error: %s" % exc)
+                        raise
 
                 response = client.getresponse()
 
+                # Attempt to get the optional response time header sent from
+                # the server
+                svr_resp_time = response.getheader(
+                    'WBEMServerResponseTime', None)
+                if svr_resp_time:
+                    try:
+                        # convert to float and map from microsec to sec.
+                        svr_resp_time = float(svr_resp_time) / 1000000
+                    except ValueError:
+                        pass
+
+                if recorders:
+                    for recorder in recorders:
+                        recorder.stage_http_response1(
+                            conn_id,
+                            response.version,
+                            response.status,
+                            response.reason,
+                            dict(response.getheaders()))
+
                 if response.status != 200:
                     if response.status == 401:
-                        if num_tries >= try_limit:
-                            raise AuthError(response.reason)
                         if not local:
-                            raise AuthError(response.reason)
+                            raise AuthError(response.reason, conn_id=conn_id)
                         auth_chal = response.getheader('WWW-Authenticate', '')
                         if 'openwbem' in response.getheader('Server', ''):
                             if 'OWLocal' not in auth_chal:
                                 try:
                                     uid = os.getuid()
                                 except AttributeError:
-                                    raise ConnectionError(
-                                        "OWLocal authorization for OpenWbem "\
-                                        "server not supported on %s platform "\
-                                        "due to missing os.getuid()" % \
-                                        platform.system())
-                                local_auth_header = ('Authorization',
-                                                     'OWLocal uid="%d"' % uid)
-                                continue
+                                    raise AuthError(
+                                        _format(
+                                            "OWLocal authorization for "
+                                            "OpenWbem server not supported on "
+                                            "{0} platform due to missing "
+                                            "os.getuid()", platform.system()),
+                                        conn_id=conn_id)
+                                local_auth_header = (
+                                    'Authorization',
+                                    'OWLocal uid="{0}"'.format(uid))
+                                continue  # with next retry
                             else:
                                 try:
                                     nonce_idx = auth_chal.index('nonce=')
                                     nonce_begin = auth_chal.index('"',
                                                                   nonce_idx)
                                     nonce_end = auth_chal.index('"',
-                                                                nonce_begin+1)
-                                    nonce = auth_chal[nonce_begin+1:nonce_end]
+                                                                nonce_begin + 1)
+                                    nonce = auth_chal[nonce_begin + 1:nonce_end]
                                     cookie_idx = auth_chal.index('cookiefile=')
                                     cookie_begin = auth_chal.index('"',
                                                                    cookie_idx)
                                     cookie_end = auth_chal.index(
-                                        '"', cookie_begin+1)
+                                        '"', cookie_begin + 1)
                                     cookie_file = auth_chal[
-                                        cookie_begin+1:cookie_end]
+                                        cookie_begin + 1: cookie_end]
                                     file_hndl = open(cookie_file, 'r')
                                     cookie = file_hndl.read().strip()
                                     file_hndl.close()
                                     local_auth_header = (
                                         'Authorization',
-                                        'OWLocal nonce="%s", cookie="%s"' % \
-                                        (nonce, cookie))
-                                    continue
+                                        'OWLocal nonce="{0}", cookie="{1}"'.
+                                        format(nonce, cookie))
+                                    continue  # with next retry
+                                # pylint: disable=broad-except
                                 except Exception as exc:
-                                    if debug:
-                                        print("Debug: Ignoring exception %s " \
-                                              "in OpenWBEM auth challenge " \
-                                              "processing." % exc)
                                     local_auth_header = None
-                                    continue
+                                    warnings.warn(
+                                        _format(
+                                            "Exception in OpenWBEM auth "
+                                            "challenge processing: {0} "
+                                            "(retrying - this was attempt "
+                                            "{1} of {2})",
+                                            exc, num_tries + 1, try_limit),
+                                        ToleratedServerIssueWarning,
+                                        stacklevel=2)
+                                    continue  # with next retry
                         elif 'Local' in auth_chal:
                             try:
                                 beg = auth_chal.index('"') + 1
@@ -739,27 +930,34 @@ def wbem_request(url, data, creds, headers=[], debug=0, x509=None,
                                     file_hndl.close()
                                     local_auth_header = (
                                         'PegasusAuthorization',
-                                        'Local "%s:%s:%s"' % \
-                                        (locallogin, _file, cookie))
-                                    continue
+                                        'Local "{0}:{1}:{2}"'.
+                                        format(locallogin, _file, cookie))
+                                    continue  # with next retry
                             except ValueError:
                                 pass
-                        raise AuthError(response.reason)
+                        raise AuthError(response.reason, conn_id=conn_id)
 
                     cimerror_hdr = response.getheader('CIMError', None)
                     if cimerror_hdr is not None:
-                        exc_str = 'CIMError: %s' % cimerror_hdr
-                        pgerrordetail_hdr = response.getheader('PGErrorDetail',
-                                                               None)
-                        if pgerrordetail_hdr is not None:
-                            #pylint: disable=too-many-function-args
-                            exc_str += ', PGErrorDetail: %s' %\
-                                urllib.parse.unquote(pgerrordetail_hdr)
-                        raise ConnectionError(exc_str)
+                        cimdetails = {}
+                        pgdetails_hdr = response.getheader('PGErrorDetail',
+                                                           None)
+                        if pgdetails_hdr is not None:
+                            # pylint: disable=too-many-function-args
+                            cimdetails['PGErrorDetail'] = \
+                                urllib.parse.unquote(pgdetails_hdr)
+                        raise HTTPError(response.status, response.reason,
+                                        cimerror_hdr, cimdetails,
+                                        conn_id=conn_id)
 
-                    raise ConnectionError('HTTP error: %s' % response.reason)
+                    raise HTTPError(response.status, response.reason,
+                                    conn_id=conn_id)
 
                 body = response.read()
+
+                if recorders:
+                    for recorder in recorders:
+                        recorder.stage_http_response2(body)
 
             except httplib.BadStatusLine as exc:
                 # Background: BadStatusLine is documented to be raised only
@@ -767,45 +965,90 @@ def wbem_request(url, data, creds, headers=[], debug=0, x509=None,
                 # However, httplib currently raises BadStatusLine also
                 # independent of strict when a keep-alive connection times out
                 # (e.g. because the server went down).
-                # See http://bugs.python.org/issue8450.
+                # See https://bugs.python.org/issue8450.
+                # In Python 3.5, this case is raised as a new
+                # httplib.RemoteDisconnected exception, which is also still
+                # a BadStatusLine exception with an empty line.
                 if exc.line is None or exc.line.strip().strip("'") in \
-                                       ('', 'None'):
-                    raise ConnectionError("The server closed the "\
-                        "connection without returning any data, or the "\
-                        "client timed out")
+                        ('', 'None'):
+                    # TODO 4/2018 AM Enable retry logic. For unknown reasons,
+                    #   retrying causes testclient test case SocketError104 to
+                    #   fail. Also, retrying needs to be tested with a real
+                    #   WBEM server.
+                    if False:  # pylint: disable=using-constant-test
+                        warnings.warn(
+                            _format("The server closed the connection without "
+                                    "returning any response (retrying - this "
+                                    "was attempt {0} of {1} at {2})",
+                                    num_tries + 1, try_limit, datetime.now()),
+                            ToleratedServerIssueWarning,
+                            stacklevel=2)
+                        continue  # with next retry
+                    else:
+                        raise ConnectionError(
+                            "The server closed the connection without "
+                            "returning any response",
+                            conn_id=conn_id)
                 else:
-                    raise ConnectionError("The server returned a bad "\
-                        "HTTP status line: %r" % exc.line)
+                    raise ConnectionError(
+                        _format("The server returned a bad HTTP status line: "
+                                "{0!A}", exc.line),
+                        conn_id=conn_id)
             except httplib.IncompleteRead as exc:
-                raise ConnectionError("HTTP incomplete read: %s" % exc)
+                raise ConnectionError(
+                    _format("HTTP incomplete read: {0}", exc),
+                    conn_id=conn_id)
             except httplib.NotConnected as exc:
-                raise ConnectionError("HTTP not connected: %s" % exc)
+                raise ConnectionError(
+                    _format("HTTP not connected: {0}", exc),
+                    conn_id=conn_id)
+            except httplib.HTTPException as exc:
+                # Base class for all httplib exceptions
+                raise ConnectionError(
+                    _format("HTTP error: {0}", exc),
+                    conn_id=conn_id)
             except SocketErrors as exc:
-                raise ConnectionError("Socket error: %s" % exc)
+                raise ConnectionError(
+                    _format("Socket error: {0}", exc),
+                    conn_id=conn_id)
 
+            # Operation was successful
             break
 
-    return body
+    return body, svr_resp_time
 
 
-def get_object_header(obj):
-    """Return the HTTP header required to make a CIM operation request
-    using the given object.  Return None if the object does not need
-    to have a header."""
+def get_cimobject_header(obj):
+    """
+    Return the value for the CIM-XML extension header field 'CIMObject', using
+    the given object.
 
-    # Local namespacepath
+    This function implements the rules defined in DSP0200 section 6.3.7
+    "CIMObject". The format of the CIMObject value is similar but not identical
+    to a local WBEM URI (one without namespace type and authority), as defined
+    in DSP0207.
 
+    One difference is that DSP0207 requires a leading slash for a local WBEM
+    URI, e.g. '/root/cimv2:CIM_Class.k=1', while the CIMObject value has no
+    leading slash, e.g. 'root/cimv2:CIM_Class.k=1'.
+
+    Another difference is that the CIMObject value for instance paths has
+    provisions for an instance path without keys, while WBEM URIs do not have
+    that. Pywbem does not support that.
+    """
+
+    # Local namespace path
     if isinstance(obj, six.string_types):
-        return 'CIMObject: %s' % obj
+        return obj
 
-    # CIMLocalClassPath
-
+    # Local class path
     if isinstance(obj, CIMClassName):
-        return 'CIMObject: %s:%s' % (obj.namespace, obj.classname)
+        return obj.to_wbem_uri(format='cimobject')
 
-    # CIMInstanceName with namespace
+    # Local instance path
+    if isinstance(obj, CIMInstanceName):
+        return obj.to_wbem_uri(format='cimobject')
 
-    if isinstance(obj, CIMInstanceName) and obj.namespace is not None:
-        return 'CIMObject: %s' % obj
-
-    raise TypeError('Don\'t know how to generate HTTP headers for %s' % obj)
+    raise TypeError(
+        _format("Invalid object type {0} to generate CIMObject header value "
+                "from", type(obj)))

@@ -1,1 +1,2 @@
 pywbem
+pywbem_mock

@@ -1,0 +1,381 @@
+- name: InvokeMethod1
+  description: Pass two input parameters via Params as list of tuple(name,value), no output parameters
+  pywbem_request:
+    url: http://acme.com:80
+    creds:
+    - username
+    - password
+    namespace: root/cimv2
+    timeout: 10
+    debug: true
+    operation:
+      pywbem_method: InvokeMethod
+      MethodName: SendTestIndicationsCount
+      ObjectName:
+        pywbem_object: CIMClassName
+        classname: Test_IndicationProviderClass
+        host: null
+        namespace: test/TestProvider
+      Params:
+        - - indicationSendCount
+          - pywbem_object: Uint32
+            x: 0
+        - - indicationDropCount
+          - pywbem_object: Uint32
+            x: 42
+        - - optionalP1
+          - null
+  pywbem_response:
+    result:
+    - 0
+    - {}
+  http_request:
+    verb: POST
+    url: http://acme.com:80/cimom
+    headers:
+      CIMOperation: MethodCall
+      CIMMethod: SendTestIndicationsCount
+      CIMObject: test/TestProvider%3ATest_IndicationProviderClass
+    data: >
+      <?xml version="1.0" encoding="utf-8" ?>
+      <CIM CIMVERSION="2.0" DTDVERSION="2.0">
+      <MESSAGE ID="1001" PROTOCOLVERSION="1.0">
+      <SIMPLEREQ>
+      <METHODCALL NAME="SendTestIndicationsCount">
+      <LOCALCLASSPATH>
+      <LOCALNAMESPACEPATH>
+      <NAMESPACE NAME="test"/>
+      <NAMESPACE NAME="TestProvider"/>
+      </LOCALNAMESPACEPATH>
+      <CLASSNAME NAME="Test_IndicationProviderClass"/>
+      </LOCALCLASSPATH>
+      <PARAMVALUE NAME="indicationSendCount" PARAMTYPE="uint32">
+      <VALUE>0</VALUE>
+      </PARAMVALUE>
+      <PARAMVALUE NAME="indicationDropCount" PARAMTYPE="uint32">
+      <VALUE>42</VALUE>
+      </PARAMVALUE>
+      <PARAMVALUE NAME="optionalP1"/>
+      </METHODCALL>
+      </SIMPLEREQ>
+      </MESSAGE>
+      </CIM>
+  http_response:
+    status: 200
+    headers:
+      CIMOperation: MethodResponse
+    data: >
+      <?xml version="1.0" encoding="utf-8" ?>
+      <CIM CIMVERSION="2.0" DTDVERSION="2.0">
+      <MESSAGE ID="1001" PROTOCOLVERSION="1.0">
+      <SIMPLERSP>
+      <METHODRESPONSE NAME="SendTestIndicationsCount">
+      <RETURNVALUE PARAMTYPE="sint32">
+      <VALUE>0</VALUE>
+      </RETURNVALUE>
+      </METHODRESPONSE>
+      </SIMPLERSP>
+      </MESSAGE>
+      </CIM>
+
+- name: InvokeMethod2
+  description: Pass two input parameters via Params as list of CIMParameter objects, no output parameters
+  pywbem_request:
+    url: http://acme.com:80
+    creds:
+    - username
+    - password
+    namespace: root/cimv2
+    timeout: 10
+    debug: true
+    operation:
+      pywbem_method: InvokeMethod
+      MethodName: SendTestIndicationsCount
+      ObjectName:
+        pywbem_object: CIMClassName
+        classname: Test_IndicationProviderClass
+        host: null
+        namespace: test/TestProvider
+      Params:
+      - pywbem_object: CIMParameter
+        name: indicationSendCount
+        type: uint32
+        value: 0
+      - pywbem_object: CIMParameter
+        name: indicationDropCount
+        type: uint32
+        value: 42
+      - pywbem_object: CIMParameter
+        name: optionalP1
+        type: uint32
+        value: null
+  pywbem_response:
+    result:
+    - 0
+    - {}
+  http_request:
+    verb: POST
+    url: http://acme.com:80/cimom
+    headers:
+      CIMOperation: MethodCall
+      CIMMethod: SendTestIndicationsCount
+      CIMObject: test/TestProvider%3ATest_IndicationProviderClass
+    data: >
+      <?xml version="1.0" encoding="utf-8" ?>
+      <CIM CIMVERSION="2.0" DTDVERSION="2.0">
+      <MESSAGE ID="1001" PROTOCOLVERSION="1.0">
+      <SIMPLEREQ>
+      <METHODCALL NAME="SendTestIndicationsCount">
+      <LOCALCLASSPATH>
+      <LOCALNAMESPACEPATH>
+      <NAMESPACE NAME="test"/>
+      <NAMESPACE NAME="TestProvider"/>
+      </LOCALNAMESPACEPATH>
+      <CLASSNAME NAME="Test_IndicationProviderClass"/>
+      </LOCALCLASSPATH>
+      <PARAMVALUE NAME="indicationSendCount" PARAMTYPE="uint32">
+      <VALUE>0</VALUE>
+      </PARAMVALUE>
+      <PARAMVALUE NAME="indicationDropCount" PARAMTYPE="uint32">
+      <VALUE>42</VALUE>
+      </PARAMVALUE>
+      <PARAMVALUE NAME="optionalP1" PARAMTYPE="uint32"/>
+      </METHODCALL>
+      </SIMPLEREQ>
+      </MESSAGE>
+      </CIM>
+  http_response:
+    status: 200
+    headers:
+      CIMOperation: MethodResponse
+    data: >
+      <?xml version="1.0" encoding="utf-8" ?>
+      <CIM CIMVERSION="2.0" DTDVERSION="2.0">
+      <MESSAGE ID="1001" PROTOCOLVERSION="1.0">
+      <SIMPLERSP>
+      <METHODRESPONSE NAME="SendTestIndicationsCount">
+      <RETURNVALUE PARAMTYPE="sint32">
+      <VALUE>0</VALUE>
+      </RETURNVALUE>
+      </METHODRESPONSE>
+      </SIMPLERSP>
+      </MESSAGE>
+      </CIM>
+
+- name: InvokeMethod3
+  description: Pass no input parameters, but two output parameters
+  pywbem_request:
+    url: http://acme.com:80
+    creds:
+    - username
+    - password
+    namespace: root/cimv2
+    timeout: 10
+    debug: true
+    operation:
+      pywbem_method: InvokeMethod
+      MethodName: GetTestIndicationsCount
+      ObjectName:
+        pywbem_object: CIMClassName
+        classname: Test_IndicationProviderClass
+        host: null
+        namespace: test/TestProvider
+  pywbem_response:
+    result:
+    - 0
+    - indicationSendCount:
+        pywbem_object: Uint32
+        x: 0
+      indicationDropCount:
+        pywbem_object: Uint32
+        x: 42
+  http_request:
+    verb: POST
+    url: http://acme.com:80/cimom
+    headers:
+      CIMOperation: MethodCall
+      CIMMethod: GetTestIndicationsCount
+      CIMObject: test/TestProvider%3ATest_IndicationProviderClass
+    data: >
+      <?xml version="1.0" encoding="utf-8" ?>
+      <CIM CIMVERSION="2.0" DTDVERSION="2.0">
+      <MESSAGE ID="1001" PROTOCOLVERSION="1.0">
+      <SIMPLEREQ>
+      <METHODCALL NAME="GetTestIndicationsCount">
+      <LOCALCLASSPATH>
+      <LOCALNAMESPACEPATH>
+      <NAMESPACE NAME="test"/>
+      <NAMESPACE NAME="TestProvider"/>
+      </LOCALNAMESPACEPATH>
+      <CLASSNAME NAME="Test_IndicationProviderClass"/>
+      </LOCALCLASSPATH>
+      </METHODCALL>
+      </SIMPLEREQ>
+      </MESSAGE>
+      </CIM>
+  http_response:
+    status: 200
+    headers:
+      CIMOperation: MethodResponse
+    data: >
+      <?xml version="1.0" encoding="utf-8" ?>
+      <CIM CIMVERSION="2.0" DTDVERSION="2.0">
+      <MESSAGE ID="1001" PROTOCOLVERSION="1.0">
+      <SIMPLERSP>
+      <METHODRESPONSE NAME="GetTestIndicationsCount">
+      <RETURNVALUE PARAMTYPE="sint32">
+      <VALUE>0</VALUE>
+      </RETURNVALUE>
+      <PARAMVALUE NAME="indicationSendCount" PARAMTYPE="uint32">
+      <VALUE>0</VALUE>
+      </PARAMVALUE>
+      <PARAMVALUE NAME="indicationDropCount" PARAMTYPE="uint32">
+      <VALUE>42</VALUE>
+      </PARAMVALUE>
+      </METHODRESPONSE>
+      </SIMPLERSP>
+      </MESSAGE>
+      </CIM>
+
+- name: InvokeMethod4
+  description: Pass one input parameter via **params as list of tuple(name,value), no output parameters
+  # Note: We can pass only one parameter because the **kwargs mechanism does not preserve the order
+  pywbem_request:
+    url: http://acme.com:80
+    creds:
+    - username
+    - password
+    namespace: root/cimv2
+    timeout: 10
+    debug: true
+    operation:
+      pywbem_method: InvokeMethod
+      MethodName: SendTestIndicationsCount
+      ObjectName:
+        pywbem_object: CIMClassName
+        classname: Test_IndicationProviderClass
+        host: null
+        namespace: test/TestProvider
+      indicationSendCount:
+        pywbem_object: Uint32
+        x: 0
+  pywbem_response:
+    result:
+    - 0
+    - {}
+  http_request:
+    verb: POST
+    url: http://acme.com:80/cimom
+    headers:
+      CIMOperation: MethodCall
+      CIMMethod: SendTestIndicationsCount
+      CIMObject: test/TestProvider%3ATest_IndicationProviderClass
+    data: >
+      <?xml version="1.0" encoding="utf-8" ?>
+      <CIM CIMVERSION="2.0" DTDVERSION="2.0">
+      <MESSAGE ID="1001" PROTOCOLVERSION="1.0">
+      <SIMPLEREQ>
+      <METHODCALL NAME="SendTestIndicationsCount">
+      <LOCALCLASSPATH>
+      <LOCALNAMESPACEPATH>
+      <NAMESPACE NAME="test"/>
+      <NAMESPACE NAME="TestProvider"/>
+      </LOCALNAMESPACEPATH>
+      <CLASSNAME NAME="Test_IndicationProviderClass"/>
+      </LOCALCLASSPATH>
+      <PARAMVALUE NAME="indicationSendCount" PARAMTYPE="uint32">
+      <VALUE>0</VALUE>
+      </PARAMVALUE>
+      </METHODCALL>
+      </SIMPLEREQ>
+      </MESSAGE>
+      </CIM>
+  http_response:
+    status: 200
+    headers:
+      CIMOperation: MethodResponse
+    data: >
+      <?xml version="1.0" encoding="utf-8" ?>
+      <CIM CIMVERSION="2.0" DTDVERSION="2.0">
+      <MESSAGE ID="1001" PROTOCOLVERSION="1.0">
+      <SIMPLERSP>
+      <METHODRESPONSE NAME="SendTestIndicationsCount">
+      <RETURNVALUE PARAMTYPE="sint32">
+      <VALUE>0</VALUE>
+      </RETURNVALUE>
+      </METHODRESPONSE>
+      </SIMPLERSP>
+      </MESSAGE>
+      </CIM>
+
+- name: InvokeMethod_SFCB_UEP
+  description: Verify that UpdateExpiredPassword causes the corresponding Pragma header to be added
+  pywbem_request:
+    url: http://acme.com:80
+    creds:
+    - username
+    - password
+    namespace: root/cimv2
+    timeout: 10
+    debug: true
+    operation:
+      pywbem_method: InvokeMethod
+      MethodName: UpdateExpiredPassword
+      ObjectName:
+        pywbem_object: CIMClassName
+        classname: SFCB_Account
+        host: null
+        namespace: root/interop
+      UserPassword: foo
+  pywbem_response:
+    result:
+    - 0
+    - {}
+  http_request:
+    verb: POST
+    url: http://acme.com:80/cimom
+    headers:
+      CIMOperation: MethodCall
+      CIMMethod: UpdateExpiredPassword
+      CIMObject: root/interop%3ASFCB_Account
+      Pragma: UpdateExpiredPassword
+    data: >
+      <?xml version="1.0" encoding="utf-8" ?>
+      <CIM CIMVERSION="2.0" DTDVERSION="2.0">
+      <MESSAGE ID="1001" PROTOCOLVERSION="1.0">
+      <SIMPLEREQ>
+      <METHODCALL NAME="UpdateExpiredPassword">
+      <LOCALCLASSPATH>
+      <LOCALNAMESPACEPATH>
+      <NAMESPACE NAME="root"/>
+      <NAMESPACE NAME="interop"/>
+      </LOCALNAMESPACEPATH>
+      <CLASSNAME NAME="SFCB_Account"/>
+      </LOCALCLASSPATH>
+      <PARAMVALUE NAME="UserPassword" PARAMTYPE="string">
+      <VALUE>foo</VALUE>
+      </PARAMVALUE>
+      </METHODCALL>
+      </SIMPLEREQ>
+      </MESSAGE>
+      </CIM>
+  http_response:
+    status: 200
+    headers:
+      CIMOperation: MethodResponse
+    data: >
+      <?xml version="1.0" encoding="utf-8" ?>
+      <CIM CIMVERSION="2.0" DTDVERSION="2.0">
+      <MESSAGE ID="1001" PROTOCOLVERSION="1.0">
+      <SIMPLERSP>
+      <METHODRESPONSE NAME="UpdateExpiredPassword">
+      <RETURNVALUE PARAMTYPE="sint32">
+      <VALUE>0</VALUE>
+      </RETURNVALUE>
+      </METHODRESPONSE>
+      </SIMPLERSP>
+      </MESSAGE>
+      </CIM>
+
+# TODO 01/18 AM: Add testcases for namespaces with leading/trailing slashes
+

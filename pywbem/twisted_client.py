@@ -39,7 +39,7 @@ from twisted.web import http #, client, error
 
 # TODO: Eww - we should get rid of the tupletree, tupleparse modules
 # and replace with elementtree based code.
-from . import cim_types, cim_xml, cim_obj, tupleparse, tupletree
+from pywbem import cim_types, cim_xml, cim_obj, tupleparse, tupletree
 from .cim_obj import CIMClass, CIMClassName, CIMInstance, CIMInstanceName
 from .cim_operations import CIMError
 from .cim_types import CIMDateTime
@@ -158,7 +158,7 @@ class WBEMClientFactory(protocol.ClientFactory):
     def imethodcallPayload(self, methodname, localnsp, **kwargs):
         """Generate the XML payload for an intrinsic methodcall."""
 
-        param_list = [pywbem.IPARAMVALUE(x[0], pywbem.tocimxml(x[1]))
+        param_list = [cim_xml.IPARAMVALUE(x[0], cim_obj.tocimxml(x[1]))
                       for x in kwargs.items()]
 
         payload = cim_xml.CIM(
@@ -373,7 +373,8 @@ class GetInstance(WBEMClientFactory):
         tt = tupletree.xml_to_tupletree(
             tostring(xml.find('.//INSTANCE')))
 
-        return tupleparse.parse_instance(tt)
+        tp = tupleparse.TupleParser()
+        return tp.parse_instance(tt)
 
 class DeleteInstance(WBEMClientFactory):
     """Factory to produce DeleteInstance WBEM clients."""
@@ -768,6 +769,8 @@ class ExecQuery(WBEMClientFactory):
                (self.__class__, self.namespace, self.Query, id(self))
 
     def parseResponse(self, xml):
-        tt = [pywbem.tupletree.xml_to_tupletree(tostring(x))
+        tt = [tupletree.xml_to_tupletree(tostring(x))
               for x in xml.findall('.//INSTANCE')]
-        return [pywbem.tupleparse.parse_instance(x) for x in tt]
+
+        tp = tupleparse.TupleParser()
+        return [tp.parse_instance(x) for x in tt]
