@@ -28,7 +28,7 @@ yamlordereddictloader>=0.4.0
 funcsigs>=1.0.2
 
 # Indirect dependencies that are needed due to version pinning
-PyYAML==3.11; python_version == '2.6'  # yaml package, used by yamlordereddictloader
+PyYAML==5.1; python_version == '2.6'  # yaml package, used by yamlordereddictloader
 PyYAML>=3.13; python_version >= '2.7'  # yaml package, used by yamlordereddictloader
 
 # Coverage reporting (no imports, invoked via coveralls script, only used on py27):
